@@ -16,6 +16,9 @@ func SetupRoutes(app *fiber.App) {
 	// Onboarding route
 	api.Post("/onboarding", controllers.SubmitOnboarding)
 
+	api.Post("/score", controllers.SubmitScore)
+	api.Post("/post-resolution", controllers.SavePostResolution)
+
 	// Chat session & AI moderation
 	api.Post("/session", controllers.StartSession)
 	api.Post("/moderate", controllers.ModerateChat)

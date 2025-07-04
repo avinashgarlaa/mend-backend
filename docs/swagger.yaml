@@ -1,5 +1,26 @@
 basePath: /api
 definitions:
+  models.CommunicationScore:
+    properties:
+      clarity:
+        type: number
+      createdAt:
+        type: integer
+      empathy:
+        type: number
+      listening:
+        type: number
+      openMindedness:
+        type: number
+      respect:
+        type: number
+      responsiveness:
+        type: number
+      sessionId:
+        type: string
+      userId:
+        type: string
+    type: object
   models.Message:
     properties:
       speakerId:
@@ -34,6 +55,21 @@ definitions:
         items:
           type: string
         type: array
+      userId:
+        type: string
+    type: object
+  models.PostResolution:
+    properties:
+      bondingActivity:
+        type: string
+      gratitude:
+        type: string
+      reflection:
+        type: string
+      sessionId:
+        type: string
+      timestamp:
+        type: integer
       userId:
         type: string
     type: object
@@ -283,6 +319,29 @@ paths:
       summary: Submit onboarding form
       tags:
       - Onboarding
+  /api/post-resolution:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Post-resolution data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.PostResolution'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Save post-resolution reflection
+      tags:
+      - Reflection
   /api/reflection:
     post:
       consumes:
@@ -345,6 +404,29 @@ paths:
       summary: Register a new user
       tags:
       - Users
+  /api/score:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Score Data
+        in: body
+        name: score
+        required: true
+        schema:
+          $ref: '#/definitions/models.CommunicationScore'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit communication score
+      tags:
+      - Communication
   /api/session:
     post:
       consumes:

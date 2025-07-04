@@ -233,6 +233,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/post-resolution": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reflection"
+                ],
+                "summary": "Save post-resolution reflection",
+                "parameters": [
+                    {
+                        "description": "Post-resolution data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PostResolution"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/reflection": {
             "post": {
                 "description": "Stores a post-session reflection entry from a user",
@@ -328,6 +364,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/score": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Communication"
+                ],
+                "summary": "Submit communication score",
+                "parameters": [
+                    {
+                        "description": "Score Data",
+                        "name": "score",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CommunicationScore"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/session": {
             "post": {
                 "description": "Creates a new user session in MongoDB",
@@ -382,6 +454,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.CommunicationScore": {
+            "type": "object",
+            "properties": {
+                "clarity": {
+                    "type": "number"
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "empathy": {
+                    "type": "number"
+                },
+                "listening": {
+                    "type": "number"
+                },
+                "openMindedness": {
+                    "type": "number"
+                },
+                "respect": {
+                    "type": "number"
+                },
+                "responsiveness": {
+                    "type": "number"
+                },
+                "sessionId": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Message": {
             "type": "object",
             "properties": {
@@ -429,6 +533,29 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PostResolution": {
+            "type": "object",
+            "properties": {
+                "bondingActivity": {
+                    "type": "string"
+                },
+                "gratitude": {
+                    "type": "string"
+                },
+                "reflection": {
+                    "type": "string"
+                },
+                "sessionId": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
                 },
                 "userId": {
                     "type": "string"
