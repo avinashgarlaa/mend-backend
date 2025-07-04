@@ -12,6 +12,31 @@ definitions:
         description: Unix timestamp
         type: integer
     type: object
+  models.Onboarding:
+    properties:
+      currentChallenges:
+        description: multiple-choice
+        items:
+          type: string
+        type: array
+      gender:
+        type: string
+      name:
+        type: string
+      otherChallenge:
+        description: optional custom input
+        type: string
+      otherGoal:
+        description: optional custom input
+        type: string
+      relationshipGoals:
+        description: multiple-choice
+        items:
+          type: string
+        type: array
+      userId:
+        type: string
+    type: object
   models.Reflection:
     properties:
       appreciation:
@@ -222,6 +247,42 @@ paths:
       summary: Start a moderated AI voice session
       tags:
       - Chat
+  /api/onboarding:
+    post:
+      consumes:
+      - application/json
+      description: Stores onboarding details for a user
+      parameters:
+      - description: Onboarding Data
+        in: body
+        name: onboarding
+        required: true
+        schema:
+          $ref: '#/definitions/models.Onboarding'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit onboarding form
+      tags:
+      - Onboarding
   /api/reflection:
     post:
       consumes:

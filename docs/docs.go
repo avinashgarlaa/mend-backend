@@ -178,6 +178,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/onboarding": {
+            "post": {
+                "description": "Stores onboarding details for a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Onboarding"
+                ],
+                "summary": "Submit onboarding form",
+                "parameters": [
+                    {
+                        "description": "Onboarding Data",
+                        "name": "onboarding",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Onboarding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/reflection": {
             "post": {
                 "description": "Stores a post-session reflection entry from a user",
@@ -341,6 +396,42 @@ const docTemplate = `{
                 "timestamp": {
                     "description": "Unix timestamp",
                     "type": "integer"
+                }
+            }
+        },
+        "models.Onboarding": {
+            "type": "object",
+            "properties": {
+                "currentChallenges": {
+                    "description": "multiple-choice",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "otherChallenge": {
+                    "description": "optional custom input",
+                    "type": "string"
+                },
+                "otherGoal": {
+                    "description": "optional custom input",
+                    "type": "string"
+                },
+                "relationshipGoals": {
+                    "description": "multiple-choice",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userId": {
+                    "type": "string"
                 }
             }
         },
