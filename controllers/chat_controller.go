@@ -1,3 +1,22 @@
+// StartModeratedSession godoc
+// @Summary Start a moderated AI voice session
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param session body models.Session true "Session Info"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Router /api/moderate [post]
+// SubmitReflection godoc
+// @Summary Submit reflection after a session
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param reflection body models.Reflection true "Reflection info"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /api/reflection [post]
+
 package controllers
 
 import (

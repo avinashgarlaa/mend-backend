@@ -1,3 +1,12 @@
+// GetInsights godoc
+// @Summary Get communication insights for a user
+// @Tags Insights
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]string
+// @Router /api/insights/{userId} [get]
+
 package controllers
 
 import (

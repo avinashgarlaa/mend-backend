@@ -1,12 +1,22 @@
 // RegisterUser godoc
 // @Summary Register a new user
+// @Description Creates a new user account in the system.
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param user body models.User true "User Data"
+// @Param user body models.User true "User Info"
 // @Success 201 {object} models.User
 // @Failure 400 {object} map[string]string
 // @Router /api/register [post]
+// InvitePartner godoc
+// @Summary Send an invite code to partner
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param invite body map[string]string true "Email or userId"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /api/invite [post]
 
 package controllers
 
