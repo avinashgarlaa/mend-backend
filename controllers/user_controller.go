@@ -1,3 +1,13 @@
+// RegisterUser godoc
+// @Summary Register a new user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User Data"
+// @Success 201 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Router /api/register [post]
+
 package controllers
 
 import (

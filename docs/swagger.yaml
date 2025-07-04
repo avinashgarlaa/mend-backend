@@ -1,0 +1,9 @@
+basePath: /api
+host: mend-backend-j0qd.onrender.com
+info:
+  contact: {}
+  description: AI-powered couples therapy backend API
+  title: Mend API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

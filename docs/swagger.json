@@ -1,0 +1,12 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "AI-powered couples therapy backend API",
+        "title": "Mend API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "mend-backend-j0qd.onrender.com",
+    "basePath": "/api",
+    "paths": {}
+}
