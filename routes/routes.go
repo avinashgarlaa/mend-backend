@@ -13,6 +13,9 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/register", controllers.RegisterUser)
 	api.Post("/invite", controllers.InvitePartner)
 
+	// Onboarding route
+	api.Post("/onboarding", controllers.SubmitOnboarding)
+
 	// Chat session & AI moderation
 	api.Post("/session", controllers.StartSession)
 	api.Post("/moderate", controllers.ModerateChat)
