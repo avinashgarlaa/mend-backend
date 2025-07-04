@@ -15,7 +15,471 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/api/insights/{userId}": {
+            "get": {
+                "description": "Returns all sessions and reflections related to a user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Insights"
+                ],
+                "summary": "Get communication insights for a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/invite": {
+            "post": {
+                "description": "Links two users as partners in the system.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Send an invite code to partner",
+                "parameters": [
+                    {
+                        "description": "Invite Info (yourId and partnerId)",
+                        "name": "invite",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/moderate": {
+            "post": {
+                "description": "Sends transcript to GPT-4 and returns moderated response",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Start a moderated AI voice session",
+                "parameters": [
+                    {
+                        "description": "Transcript, Speaker, Context",
+                        "name": "session",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/reflection": {
+            "post": {
+                "description": "Stores a post-session reflection entry from a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reflections"
+                ],
+                "summary": "Submit a session reflection",
+                "parameters": [
+                    {
+                        "description": "Reflection Data",
+                        "name": "reflection",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Reflection"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Reflection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/register": {
+            "post": {
+                "description": "Creates a new user account in the system.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "User Info",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/session": {
+            "post": {
+                "description": "Creates a new user session in MongoDB",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Start a session (raw setup, before AI moderation)",
+                "parameters": [
+                    {
+                        "description": "Session Info",
+                        "name": "session",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Session"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Session"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.Message": {
+            "type": "object",
+            "properties": {
+                "speakerId": {
+                    "description": "ID of the speaker (user ID)",
+                    "type": "string"
+                },
+                "text": {
+                    "description": "What was said",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Unix timestamp",
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Reflection": {
+            "type": "object",
+            "properties": {
+                "appreciation": {
+                    "description": "\"I liked that you...\"",
+                    "type": "string"
+                },
+                "commitment": {
+                    "description": "\"Going forward, I will...\"",
+                    "type": "string"
+                },
+                "gratitude": {
+                    "description": "\"Thank you for...\"",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Reflection ID (UUID)",
+                    "type": "string"
+                },
+                "sessionId": {
+                    "description": "Associated session",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Unix time",
+                    "type": "integer"
+                },
+                "userId": {
+                    "description": "Reflecting user",
+                    "type": "string"
+                }
+            }
+        },
+        "models.Score": {
+            "type": "object",
+            "properties": {
+                "clarity": {
+                    "type": "integer"
+                },
+                "empathy": {
+                    "type": "integer"
+                },
+                "listening": {
+                    "type": "integer"
+                },
+                "openMindedness": {
+                    "type": "integer"
+                },
+                "respect": {
+                    "type": "integer"
+                },
+                "responsiveness": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Session": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "description": "Session timestamp",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "Session ID (UUID)",
+                    "type": "string"
+                },
+                "messages": {
+                    "description": "All spoken messages",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Message"
+                    }
+                },
+                "partnerA": {
+                    "description": "User ID A",
+                    "type": "string"
+                },
+                "partnerB": {
+                    "description": "User ID B",
+                    "type": "string"
+                },
+                "resolved": {
+                    "description": "Conflict resolved status",
+                    "type": "boolean"
+                },
+                "scoreA": {
+                    "description": "Score for Partner A",
+                    "$ref": "#/definitions/models.Score"
+                },
+                "scoreB": {
+                    "description": "Score for Partner B",
+                    "$ref": "#/definitions/models.Score"
+                }
+            }
+        },
+        "models.User": {
+            "type": "object",
+            "properties": {
+                "challenges": {
+                    "description": "Current challenges",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "colorCode": {
+                    "description": "UI color (e.g., pink, blue)",
+                    "type": "string"
+                },
+                "gender": {
+                    "description": "e.g., male, female, non-binary",
+                    "type": "string"
+                },
+                "goals": {
+                    "description": "Relationship goals",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "description": "Unique UUID",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "User's name",
+                    "type": "string"
+                },
+                "partnerId": {
+                    "description": "Linked partner's ID",
+                    "type": "string"
+                }
+            }
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it

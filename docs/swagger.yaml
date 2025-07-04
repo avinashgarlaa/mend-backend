@@ -1,9 +1,321 @@
 basePath: /api
+definitions:
+  models.Message:
+    properties:
+      speakerId:
+        description: ID of the speaker (user ID)
+        type: string
+      text:
+        description: What was said
+        type: string
+      timestamp:
+        description: Unix timestamp
+        type: integer
+    type: object
+  models.Reflection:
+    properties:
+      appreciation:
+        description: '"I liked that you..."'
+        type: string
+      commitment:
+        description: '"Going forward, I will..."'
+        type: string
+      gratitude:
+        description: '"Thank you for..."'
+        type: string
+      id:
+        description: Reflection ID (UUID)
+        type: string
+      sessionId:
+        description: Associated session
+        type: string
+      timestamp:
+        description: Unix time
+        type: integer
+      userId:
+        description: Reflecting user
+        type: string
+    type: object
+  models.Score:
+    properties:
+      clarity:
+        type: integer
+      empathy:
+        type: integer
+      listening:
+        type: integer
+      openMindedness:
+        type: integer
+      respect:
+        type: integer
+      responsiveness:
+        type: integer
+    type: object
+  models.Session:
+    properties:
+      createdAt:
+        description: Session timestamp
+        type: integer
+      id:
+        description: Session ID (UUID)
+        type: string
+      messages:
+        description: All spoken messages
+        items:
+          $ref: '#/definitions/models.Message'
+        type: array
+      partnerA:
+        description: User ID A
+        type: string
+      partnerB:
+        description: User ID B
+        type: string
+      resolved:
+        description: Conflict resolved status
+        type: boolean
+      scoreA:
+        $ref: '#/definitions/models.Score'
+        description: Score for Partner A
+      scoreB:
+        $ref: '#/definitions/models.Score'
+        description: Score for Partner B
+    type: object
+  models.User:
+    properties:
+      challenges:
+        description: Current challenges
+        items:
+          type: string
+        type: array
+      colorCode:
+        description: UI color (e.g., pink, blue)
+        type: string
+      gender:
+        description: e.g., male, female, non-binary
+        type: string
+      goals:
+        description: Relationship goals
+        items:
+          type: string
+        type: array
+      id:
+        description: Unique UUID
+        type: string
+      name:
+        description: User's name
+        type: string
+      partnerId:
+        description: Linked partner's ID
+        type: string
+    type: object
 host: mend-backend-j0qd.onrender.com
 info:
   contact: {}
   description: AI-powered couples therapy backend API
   title: Mend API
   version: "1.0"
-paths: {}
+paths:
+  /api/insights/{userId}:
+    get:
+      description: Returns all sessions and reflections related to a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get communication insights for a user
+      tags:
+      - Insights
+  /api/invite:
+    post:
+      consumes:
+      - application/json
+      description: Links two users as partners in the system.
+      parameters:
+      - description: Invite Info (yourId and partnerId)
+        in: body
+        name: invite
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Send an invite code to partner
+      tags:
+      - Users
+  /api/moderate:
+    post:
+      consumes:
+      - application/json
+      description: Sends transcript to GPT-4 and returns moderated response
+      parameters:
+      - description: Transcript, Speaker, Context
+        in: body
+        name: session
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Start a moderated AI voice session
+      tags:
+      - Chat
+  /api/reflection:
+    post:
+      consumes:
+      - application/json
+      description: Stores a post-session reflection entry from a user
+      parameters:
+      - description: Reflection Data
+        in: body
+        name: reflection
+        required: true
+        schema:
+          $ref: '#/definitions/models.Reflection'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Reflection'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit a session reflection
+      tags:
+      - Reflections
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account in the system.
+      parameters:
+      - description: User Info
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Users
+  /api/session:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user session in MongoDB
+      parameters:
+      - description: Session Info
+        in: body
+        name: session
+        required: true
+        schema:
+          $ref: '#/definitions/models.Session'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Session'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Start a session (raw setup, before AI moderation)
+      tags:
+      - Chat
 swagger: "2.0"

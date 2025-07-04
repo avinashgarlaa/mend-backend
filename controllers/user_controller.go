@@ -1,23 +1,3 @@
-// RegisterUser godoc
-// @Summary Register a new user
-// @Description Creates a new user account in the system.
-// @Tags Users
-// @Accept json
-// @Produce json
-// @Param user body models.User true "User Info"
-// @Success 201 {object} models.User
-// @Failure 400 {object} map[string]string
-// @Router /api/register [post]
-// InvitePartner godoc
-// @Summary Send an invite code to partner
-// @Tags Users
-// @Accept json
-// @Produce json
-// @Param invite body map[string]string true "Email or userId"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Router /api/invite [post]
-
 package controllers
 
 import (
@@ -31,7 +11,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// POST /api/register
+// RegisterUser godoc
+// @Summary Register a new user
+// @Description Creates a new user account in the system.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User Info"
+// @Success 201 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Router /api/register [post]
 func RegisterUser(c *fiber.Ctx) error {
 	var user models.User
 	if err := c.BodyParser(&user); err != nil {
@@ -53,7 +42,17 @@ func RegisterUser(c *fiber.Ctx) error {
 	return c.Status(201).JSON(user)
 }
 
-// POST /api/invite
+// InvitePartner godoc
+// @Summary Send an invite code to partner
+// @Description Links two users as partners in the system.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param invite body map[string]string true "Invite Info (yourId and partnerId)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/invite [post]
 func InvitePartner(c *fiber.Ctx) error {
 	type InviteRequest struct {
 		YourID    string `json:"yourId"`

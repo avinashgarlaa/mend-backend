@@ -1,12 +1,3 @@
-// GetInsights godoc
-// @Summary Get communication insights for a user
-// @Tags Insights
-// @Produce json
-// @Param userId path string true "User ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 404 {object} map[string]string
-// @Router /api/insights/{userId} [get]
-
 package controllers
 
 import (
@@ -19,7 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// POST /api/reflection
+// SaveReflection godoc
+// @Summary Submit a session reflection
+// @Description Stores a post-session reflection entry from a user
+// @Tags Reflections
+// @Accept json
+// @Produce json
+// @Param reflection body models.Reflection true "Reflection Data"
+// @Success 201 {object} models.Reflection
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/reflection [post]
 func SaveReflection(c *fiber.Ctx) error {
 	var reflection models.Reflection
 	if err := c.BodyParser(&reflection); err != nil {
@@ -41,7 +42,16 @@ func SaveReflection(c *fiber.Ctx) error {
 	return c.Status(201).JSON(reflection)
 }
 
-// GET /api/insights/:userId
+// GetInsights godoc
+// @Summary Get communication insights for a user
+// @Description Returns all sessions and reflections related to a user
+// @Tags Insights
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/insights/{userId} [get]
 func GetInsights(c *fiber.Ctx) error {
 	userId := c.Params("userId")
 	if userId == "" {
@@ -53,7 +63,6 @@ func GetInsights(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Find sessions where user is PartnerA or PartnerB
 	cursor, err := sessionCollection.Find(ctx, fiber.Map{
 		"$or": []fiber.Map{
 			{"partnerA": userId},
@@ -69,7 +78,6 @@ func GetInsights(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to decode sessions"})
 	}
 
-	// Fetch all reflections
 	cursor2, err := reflectionCollection.Find(ctx, fiber.Map{"userId": userId})
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Error fetching reflections"})

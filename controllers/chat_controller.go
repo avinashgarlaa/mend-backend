@@ -1,22 +1,3 @@
-// StartModeratedSession godoc
-// @Summary Start a moderated AI voice session
-// @Tags Chat
-// @Accept json
-// @Produce json
-// @Param session body models.Session true "Session Info"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Router /api/moderate [post]
-// SubmitReflection godoc
-// @Summary Submit reflection after a session
-// @Tags Chat
-// @Accept json
-// @Produce json
-// @Param reflection body models.Reflection true "Reflection info"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Router /api/reflection [post]
-
 package controllers
 
 import (
@@ -35,7 +16,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// POST /api/session
+// StartSession godoc
+// @Summary Start a session (raw setup, before AI moderation)
+// @Description Creates a new user session in MongoDB
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param session body models.Session true "Session Info"
+// @Success 201 {object} models.Session
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/session [post]
 func StartSession(c *fiber.Ctx) error {
 	var session models.Session
 	if err := c.BodyParser(&session); err != nil {
@@ -58,7 +49,17 @@ func StartSession(c *fiber.Ctx) error {
 	return c.Status(201).JSON(session)
 }
 
-// POST /api/moderate
+// ModerateChat godoc
+// @Summary Start a moderated AI voice session
+// @Description Sends transcript to GPT-4 and returns moderated response
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param session body map[string]string true "Transcript, Speaker, Context"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/moderate [post]
 func ModerateChat(c *fiber.Ctx) error {
 	type ChatRequest struct {
 		Transcript string `json:"transcript"`
