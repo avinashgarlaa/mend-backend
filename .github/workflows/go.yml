@@ -1,7 +1,6 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+# .github/workflows/go.yml
 
-name: Go
+name: Go Build & Test
 
 on:
   push:
@@ -10,19 +9,30 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
 
-    - name: Build
-      run: go build -v ./...
+      - name: Install dependencies
+        run: go mod download
 
-    - name: Test
-      run: go test -v ./...
+      - name: Build backend
+        run: go build -o main .
+
+      - name: Run Tests
+        run: go test -v ./...
+
+      - name: Upload built binary (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mend-backend
+          path: main
