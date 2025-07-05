@@ -1,3 +1,5 @@
+// routes/routes.go
+
 package routes
 
 import (
@@ -14,16 +16,16 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/invite", controllers.InvitePartner)
 	api.Post("/onboarding", controllers.SubmitOnboarding)
 	api.Post("/login", controllers.LoginUser)
-	api.Get("/api/user/:id", controllers.GetUser)
+	api.Get("/user/:id", controllers.GetUser) // FIXED: "/api/user/:id" → redundant
 
 	// 🎙️ Session & AI Chat
 	api.Post("/session", controllers.StartSession)
 	api.Post("/moderate", controllers.ModerateChat)
 
-	// 🔄 Real-time WebSocket Messaging
+	// 🔄 Real-time WebSocket Messaging (outside /api group)
 	controllers.SetupWebSocket(app) // GET /ws/:userId
 
-	// 🧘 Post-Session Reflection & Bonding
+	// 🧘 Post-Session Flow
 	api.Post("/reflection", controllers.SaveReflection)
 	api.Post("/post-resolution", controllers.SavePostResolution)
 	api.Post("/score", controllers.SubmitScore)
