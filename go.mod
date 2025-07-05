@@ -1,6 +1,6 @@
 module mend
 
-go 1.24.1
+go 1.24
 
 require (
 	github.com/gofiber/adaptor/v2 v2.2.1
