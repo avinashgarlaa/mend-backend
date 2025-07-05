@@ -3,170 +3,130 @@ definitions:
   models.CommunicationScore:
     properties:
       clarity:
-        type: number
+        type: integer
       createdAt:
         type: integer
       empathy:
-        type: number
+        type: integer
       listening:
-        type: number
+        type: integer
       openMindedness:
-        type: number
-      respect:
-        type: number
-      responsiveness:
-        type: number
-      sessionId:
+        type: integer
+      partnerId:
+        description: Who submitted this
         type: string
-      userId:
+      respect:
+        type: integer
+      responsiveness:
+        type: integer
+      sessionId:
+        description: Which session this score is for
         type: string
     type: object
   models.Message:
     properties:
       speakerId:
-        description: ID of the speaker (user ID)
+        description: Who spoke
         type: string
       text:
-        description: What was said
+        description: Transcript
         type: string
       timestamp:
-        description: Unix timestamp
+        description: Unix time
         type: integer
-    type: object
-  models.Onboarding:
-    properties:
-      currentChallenges:
-        description: multiple-choice
-        items:
-          type: string
-        type: array
-      gender:
-        type: string
-      name:
-        type: string
-      otherChallenge:
-        description: optional custom input
-        type: string
-      otherGoal:
-        description: optional custom input
-        type: string
-      relationshipGoals:
-        description: multiple-choice
-        items:
-          type: string
-        type: array
-      userId:
-        type: string
     type: object
   models.PostResolution:
     properties:
       bondingActivity:
+        description: e.g., "Go for a walk together"
         type: string
       gratitude:
+        description: e.g., "I'm grateful for your honesty"
         type: string
       reflection:
+        description: e.g., "I felt better after the session"
         type: string
       sessionId:
+        description: Associated session ID
         type: string
       timestamp:
+        description: Unix time of submission
         type: integer
       userId:
+        description: ID of the user submitting
         type: string
     type: object
   models.Reflection:
     properties:
-      appreciation:
-        description: '"I liked that you..."'
-        type: string
-      commitment:
-        description: '"Going forward, I will..."'
-        type: string
-      gratitude:
-        description: '"Thank you for..."'
-        type: string
       id:
-        description: Reflection ID (UUID)
+        description: 'Composite ID: sessionID-userID'
         type: string
       sessionId:
-        description: Associated session
+        description: Which session
+        type: string
+      text:
+        description: Reflection content
         type: string
       timestamp:
         description: Unix time
         type: integer
       userId:
-        description: Reflecting user
+        description: Who submitted
         type: string
-    type: object
-  models.Score:
-    properties:
-      clarity:
-        type: integer
-      empathy:
-        type: integer
-      listening:
-        type: integer
-      openMindedness:
-        type: integer
-      respect:
-        type: integer
-      responsiveness:
-        type: integer
     type: object
   models.Session:
     properties:
       createdAt:
-        description: Session timestamp
+        description: Session time
         type: integer
       id:
-        description: Session ID (UUID)
+        description: UUID
         type: string
       messages:
-        description: All spoken messages
+        description: Chat transcript
         items:
           $ref: '#/definitions/models.Message'
         type: array
       partnerA:
-        description: User ID A
+        description: User A
         type: string
       partnerB:
-        description: User ID B
+        description: User B
         type: string
       resolved:
-        description: Conflict resolved status
+        description: Has reflection happened
         type: boolean
       scoreA:
-        $ref: '#/definitions/models.Score'
-        description: Score for Partner A
+        $ref: '#/definitions/models.CommunicationScore'
+        description: A's score
       scoreB:
-        $ref: '#/definitions/models.Score'
-        description: Score for Partner B
+        $ref: '#/definitions/models.CommunicationScore'
+        description: B's score
     type: object
   models.User:
     properties:
       challenges:
-        description: Current challenges
         items:
           type: string
         type: array
       colorCode:
-        description: UI color (e.g., pink, blue)
+        type: string
+      email:
         type: string
       gender:
-        description: e.g., male, female, non-binary
         type: string
       goals:
-        description: Relationship goals
         items:
           type: string
         type: array
       id:
-        description: Unique UUID
+        type: string
+      invitedBy:
+        description: ✅ NEW
         type: string
       name:
-        description: User's name
         type: string
       partnerId:
-        description: Linked partner's ID
         type: string
     type: object
 host: mend-backend-j0qd.onrender.com
@@ -178,7 +138,7 @@ info:
 paths:
   /api/insights/{userId}:
     get:
-      description: Returns all sessions and reflections related to a user
+      description: Returns sessions and reflections submitted by or about the user
       parameters:
       - description: User ID
         in: path
@@ -212,7 +172,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Links two users as partners in the system.
+      description: Links two users as partners by ID and stores inviter.
       parameters:
       - description: Invite Info (yourId and partnerId)
         in: body
@@ -243,18 +203,54 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Send an invite code to partner
+      summary: Link partners
+      tags:
+      - Users
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in user by email lookup.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login a user
       tags:
       - Users
   /api/moderate:
     post:
       consumes:
       - application/json
-      description: Sends transcript to GPT-4 and returns moderated response
+      description: Returns AI feedback + tone warning
       parameters:
-      - description: Transcript, Speaker, Context
+      - description: Transcript, Speaker
         in: body
-        name: session
+        name: input
         required: true
         schema:
           additionalProperties:
@@ -280,21 +276,21 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Start a moderated AI voice session
+      summary: GPT-4 AI moderation of transcript
       tags:
       - Chat
-  /api/onboarding:
+  /api/post-resolution:
     post:
       consumes:
       - application/json
-      description: Stores onboarding details for a user
+      description: Stores emotional bonding data after a session
       parameters:
-      - description: Onboarding Data
+      - description: Post-resolution data
         in: body
-        name: onboarding
+        name: data
         required: true
         schema:
-          $ref: '#/definitions/models.Onboarding'
+          $ref: '#/definitions/models.PostResolution'
       produces:
       - application/json
       responses:
@@ -312,29 +308,6 @@ paths:
             type: object
         "500":
           description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Submit onboarding form
-      tags:
-      - Onboarding
-  /api/post-resolution:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Post-resolution data
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/models.PostResolution'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
           schema:
             additionalProperties:
               type: string
@@ -401,6 +374,18 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Register a new user
       tags:
       - Users
@@ -408,6 +393,7 @@ paths:
     post:
       consumes:
       - application/json
+      description: Partner submits feedback for a session (used for insights)
       parameters:
       - description: Score Data
         in: body
@@ -424,6 +410,18 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Submit communication score
       tags:
       - Communication
@@ -431,7 +429,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new user session in MongoDB
+      description: Creates a session document in MongoDB
       parameters:
       - description: Session Info
         in: body
@@ -458,7 +456,38 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Start a session (raw setup, before AI moderation)
+      summary: Start a new session between partners
       tags:
-      - Chat
+      - Session
+  /api/user/{id}:
+    get:
+      description: Returns user information by user ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user by ID
+      tags:
+      - Users
 swagger: "2.0"

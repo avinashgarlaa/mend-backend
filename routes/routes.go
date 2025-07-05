@@ -9,21 +9,23 @@ import (
 func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 
-	// User routes
+	// 👤 User & Onboarding
 	api.Post("/register", controllers.RegisterUser)
 	api.Post("/invite", controllers.InvitePartner)
-
-	// Onboarding route
 	api.Post("/onboarding", controllers.SubmitOnboarding)
+	api.Post("/login", controllers.LoginUser)
+	api.Get("/api/user/:id", controllers.GetUser)
 
-	api.Post("/score", controllers.SubmitScore)
-	api.Post("/post-resolution", controllers.SavePostResolution)
-
-	// Chat session & AI moderation
+	// 🎙️ Session & AI Chat
 	api.Post("/session", controllers.StartSession)
 	api.Post("/moderate", controllers.ModerateChat)
 
-	// Reflections & Insights
+	// 🔄 Real-time WebSocket Messaging
+	controllers.SetupWebSocket(app) // GET /ws/:userId
+
+	// 🧘 Post-Session Reflection & Bonding
 	api.Post("/reflection", controllers.SaveReflection)
+	api.Post("/post-resolution", controllers.SavePostResolution)
+	api.Post("/score", controllers.SubmitScore)
 	api.Get("/insights/:userId", controllers.GetInsights)
 }

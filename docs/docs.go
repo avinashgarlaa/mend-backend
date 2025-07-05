@@ -18,7 +18,7 @@ const docTemplate = `{
     "paths": {
         "/api/insights/{userId}": {
             "get": {
-                "description": "Returns all sessions and reflections related to a user",
+                "description": "Returns sessions and reflections submitted by or about the user",
                 "produces": [
                     "application/json"
                 ],
@@ -66,7 +66,7 @@ const docTemplate = `{
         },
         "/api/invite": {
             "post": {
-                "description": "Links two users as partners in the system.",
+                "description": "Links two users as partners by ID and stores inviter.",
                 "consumes": [
                     "application/json"
                 ],
@@ -76,7 +76,7 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "Send an invite code to partner",
+                "summary": "Link partners",
                 "parameters": [
                     {
                         "description": "Invite Info (yourId and partnerId)",
@@ -122,9 +122,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/login": {
+            "post": {
+                "description": "Logs in user by email lookup.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Login a user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/moderate": {
             "post": {
-                "description": "Sends transcript to GPT-4 and returns moderated response",
+                "description": "Returns AI feedback + tone warning",
                 "consumes": [
                     "application/json"
                 ],
@@ -134,11 +189,11 @@ const docTemplate = `{
                 "tags": [
                     "Chat"
                 ],
-                "summary": "Start a moderated AI voice session",
+                "summary": "GPT-4 AI moderation of transcript",
                 "parameters": [
                     {
-                        "description": "Transcript, Speaker, Context",
-                        "name": "session",
+                        "description": "Transcript, Speaker",
+                        "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -178,63 +233,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/onboarding": {
-            "post": {
-                "description": "Stores onboarding details for a user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Onboarding"
-                ],
-                "summary": "Submit onboarding form",
-                "parameters": [
-                    {
-                        "description": "Onboarding Data",
-                        "name": "onboarding",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Onboarding"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/post-resolution": {
             "post": {
+                "description": "Stores emotional bonding data after a session",
                 "consumes": [
                     "application/json"
                 ],
@@ -259,6 +260,24 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -360,12 +379,31 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/api/score": {
             "post": {
+                "description": "Partner submits feedback for a session (used for insights)",
                 "consumes": [
                     "application/json"
                 ],
@@ -396,13 +434,31 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/api/session": {
             "post": {
-                "description": "Creates a new user session in MongoDB",
+                "description": "Creates a session document in MongoDB",
                 "consumes": [
                     "application/json"
                 ],
@@ -410,9 +466,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Chat"
+                    "Session"
                 ],
-                "summary": "Start a session (raw setup, before AI moderation)",
+                "summary": "Start a new session between partners",
                 "parameters": [
                     {
                         "description": "Session Info",
@@ -451,6 +507,53 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/user/{id}": {
+            "get": {
+                "description": "Returns user information by user ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -458,30 +561,32 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "clarity": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "createdAt": {
                     "type": "integer"
                 },
                 "empathy": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "listening": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "openMindedness": {
-                    "type": "number"
+                    "type": "integer"
                 },
-                "respect": {
-                    "type": "number"
-                },
-                "responsiveness": {
-                    "type": "number"
-                },
-                "sessionId": {
+                "partnerId": {
+                    "description": "Who submitted this",
                     "type": "string"
                 },
-                "userId": {
+                "respect": {
+                    "type": "integer"
+                },
+                "responsiveness": {
+                    "type": "integer"
+                },
+                "sessionId": {
+                    "description": "Which session this score is for",
                     "type": "string"
                 }
             }
@@ -490,52 +595,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "speakerId": {
-                    "description": "ID of the speaker (user ID)",
+                    "description": "Who spoke",
                     "type": "string"
                 },
                 "text": {
-                    "description": "What was said",
+                    "description": "Transcript",
                     "type": "string"
                 },
                 "timestamp": {
-                    "description": "Unix timestamp",
+                    "description": "Unix time",
                     "type": "integer"
-                }
-            }
-        },
-        "models.Onboarding": {
-            "type": "object",
-            "properties": {
-                "currentChallenges": {
-                    "description": "multiple-choice",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "otherChallenge": {
-                    "description": "optional custom input",
-                    "type": "string"
-                },
-                "otherGoal": {
-                    "description": "optional custom input",
-                    "type": "string"
-                },
-                "relationshipGoals": {
-                    "description": "multiple-choice",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "userId": {
-                    "type": "string"
                 }
             }
         },
@@ -543,21 +612,27 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bondingActivity": {
+                    "description": "e.g., \"Go for a walk together\"",
                     "type": "string"
                 },
                 "gratitude": {
+                    "description": "e.g., \"I'm grateful for your honesty\"",
                     "type": "string"
                 },
                 "reflection": {
+                    "description": "e.g., \"I felt better after the session\"",
                     "type": "string"
                 },
                 "sessionId": {
+                    "description": "Associated session ID",
                     "type": "string"
                 },
                 "timestamp": {
+                    "description": "Unix time of submission",
                     "type": "integer"
                 },
                 "userId": {
+                    "description": "ID of the user submitting",
                     "type": "string"
                 }
             }
@@ -565,24 +640,16 @@ const docTemplate = `{
         "models.Reflection": {
             "type": "object",
             "properties": {
-                "appreciation": {
-                    "description": "\"I liked that you...\"",
-                    "type": "string"
-                },
-                "commitment": {
-                    "description": "\"Going forward, I will...\"",
-                    "type": "string"
-                },
-                "gratitude": {
-                    "description": "\"Thank you for...\"",
-                    "type": "string"
-                },
                 "id": {
-                    "description": "Reflection ID (UUID)",
+                    "description": "Composite ID: sessionID-userID",
                     "type": "string"
                 },
                 "sessionId": {
-                    "description": "Associated session",
+                    "description": "Which session",
+                    "type": "string"
+                },
+                "text": {
+                    "description": "Reflection content",
                     "type": "string"
                 },
                 "timestamp": {
@@ -590,31 +657,8 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "userId": {
-                    "description": "Reflecting user",
+                    "description": "Who submitted",
                     "type": "string"
-                }
-            }
-        },
-        "models.Score": {
-            "type": "object",
-            "properties": {
-                "clarity": {
-                    "type": "integer"
-                },
-                "empathy": {
-                    "type": "integer"
-                },
-                "listening": {
-                    "type": "integer"
-                },
-                "openMindedness": {
-                    "type": "integer"
-                },
-                "respect": {
-                    "type": "integer"
-                },
-                "responsiveness": {
-                    "type": "integer"
                 }
             }
         },
@@ -622,39 +666,39 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "createdAt": {
-                    "description": "Session timestamp",
+                    "description": "Session time",
                     "type": "integer"
                 },
                 "id": {
-                    "description": "Session ID (UUID)",
+                    "description": "UUID",
                     "type": "string"
                 },
                 "messages": {
-                    "description": "All spoken messages",
+                    "description": "Chat transcript",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.Message"
                     }
                 },
                 "partnerA": {
-                    "description": "User ID A",
+                    "description": "User A",
                     "type": "string"
                 },
                 "partnerB": {
-                    "description": "User ID B",
+                    "description": "User B",
                     "type": "string"
                 },
                 "resolved": {
-                    "description": "Conflict resolved status",
+                    "description": "Has reflection happened",
                     "type": "boolean"
                 },
                 "scoreA": {
-                    "description": "Score for Partner A",
-                    "$ref": "#/definitions/models.Score"
+                    "description": "A's score",
+                    "$ref": "#/definitions/models.CommunicationScore"
                 },
                 "scoreB": {
-                    "description": "Score for Partner B",
-                    "$ref": "#/definitions/models.Score"
+                    "description": "B's score",
+                    "$ref": "#/definitions/models.CommunicationScore"
                 }
             }
         },
@@ -662,37 +706,37 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "challenges": {
-                    "description": "Current challenges",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "colorCode": {
-                    "description": "UI color (e.g., pink, blue)",
+                    "type": "string"
+                },
+                "email": {
                     "type": "string"
                 },
                 "gender": {
-                    "description": "e.g., male, female, non-binary",
                     "type": "string"
                 },
                 "goals": {
-                    "description": "Relationship goals",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "id": {
-                    "description": "Unique UUID",
+                    "type": "string"
+                },
+                "invitedBy": {
+                    "description": "✅ NEW",
                     "type": "string"
                 },
                 "name": {
-                    "description": "User's name",
                     "type": "string"
                 },
                 "partnerId": {
-                    "description": "Linked partner's ID",
                     "type": "string"
                 }
             }

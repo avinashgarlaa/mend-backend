@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -14,52 +14,77 @@ import (
 	"mend/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
-// StartSession godoc
-// @Summary Start a session (raw setup, before AI moderation)
-// @Description Creates a new user session in MongoDB
-// @Tags Chat
-// @Accept json
-// @Produce json
-// @Param session body models.Session true "Session Info"
-// @Success 201 {object} models.Session
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/session [post]
-func StartSession(c *fiber.Ctx) error {
-	var session models.Session
-	if err := c.BodyParser(&session); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid session data"})
-	}
+// WebSocket clients map
+var clients = make(map[string]*websocket.Conn)
 
-	session.ID = utils.GeneratePartnerID()
-	session.CreatedAt = time.Now().Unix()
-	session.Resolved = false
+// SetupWebSocket adds the real-time chat endpoint
+func SetupWebSocket(app *fiber.App) {
+	app.Use("/ws/:userId", websocket.New(func(c *websocket.Conn) {
+		userId := c.Params("userId")
+		clients[userId] = c
+		defer func() {
+			c.Close()
+			delete(clients, userId)
+		}()
 
-	collection := database.GetCollection("sessions")
+		for {
+			_, msg, err := c.ReadMessage()
+			if err != nil {
+				break
+			}
+
+			var message models.Message
+			if err := json.Unmarshal(msg, &message); err != nil {
+				continue
+			}
+			message.Timestamp = time.Now().Unix()
+
+			// Broadcast to other users
+			for id, conn := range clients {
+				if id != userId {
+					conn.WriteMessage(websocket.TextMessage, msg)
+				}
+			}
+
+			// Persist in DB
+			go appendMessageToSession(userId, message)
+		}
+	}))
+}
+
+// Appends message to active session in DB
+func appendMessageToSession(userId string, msg models.Message) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := collection.InsertOne(ctx, session)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create session"})
+	sessions := database.GetCollection("sessions")
+	filter := fiber.Map{
+		"$or": []fiber.Map{
+			{"partnerA": userId},
+			{"partnerB": userId},
+		},
+		"resolved": false,
 	}
-
-	return c.Status(201).JSON(session)
+	update := fiber.Map{
+		"$push": fiber.Map{"messages": msg},
+	}
+	_, _ = sessions.UpdateOne(ctx, filter, update)
 }
 
 // ModerateChat godoc
-// @Summary Start a moderated AI voice session
-// @Description Sends transcript to GPT-4 and returns moderated response
-// @Tags Chat
-// @Accept json
-// @Produce json
-// @Param session body map[string]string true "Transcript, Speaker, Context"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/moderate [post]
+// @Summary      GPT-4 AI moderation of transcript
+// @Description  Returns AI feedback + tone warning
+// @Tags         Chat
+// @Accept       json
+// @Produce      json
+// @Param        input body map[string]string true "Transcript, Speaker"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /api/moderate [post]
 func ModerateChat(c *fiber.Ctx) error {
 	type ChatRequest struct {
 		Transcript string `json:"transcript"`
@@ -69,40 +94,45 @@ func ModerateChat(c *fiber.Ctx) error {
 
 	var body ChatRequest
 	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid body"})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	if body.Transcript == "" || body.Speaker == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Missing transcript or speaker"})
 	}
 
 	prompt := utils.GeneratePrompt(body.Transcript)
 	openaiKey := os.Getenv("OPENAI_API_KEY")
 
-	reqBody := map[string]interface{}{
+	payload := map[string]interface{}{
 		"model": "gpt-4",
 		"messages": []map[string]string{
-			{"role": "system", "content": "You are a supportive AI couples therapist."},
+			{"role": "system", "content": "You are a helpful AI couples therapist."},
 			{"role": "user", "content": prompt},
 		},
 	}
-	jsonData, _ := json.Marshal(reqBody)
+	jsonData, _ := json.Marshal(payload)
 
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", ioutil.NopCloser(bytes.NewReader(jsonData)))
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(jsonData))
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to prepare request"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to prepare GPT request"})
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+openaiKey)
 
-	client := http.Client{Timeout: 20 * time.Second}
+	client := &http.Client{Timeout: 20 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "OpenAI request failed"})
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 
 	var gptResponse map[string]interface{}
-	json.Unmarshal(bodyBytes, &gptResponse)
+	if err := json.Unmarshal(bodyBytes, &gptResponse); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse GPT response"})
+	}
 
 	reply := gptResponse["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
 
