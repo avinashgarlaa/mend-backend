@@ -1,5 +1,3 @@
-// routes/routes.go
-
 package routes
 
 import (
@@ -11,23 +9,25 @@ import (
 func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 
-	// 👤 User & Onboarding
-	api.Post("/register", controllers.RegisterUser)
-	api.Post("/invite", controllers.InvitePartner)
-	api.Post("/onboarding", controllers.SubmitOnboarding)
-	api.Post("/login", controllers.LoginUser)
-	api.Get("/user/:id", controllers.GetUser) // FIXED: "/api/user/:id" → redundant
+	// 👤 User Management
+	api.Post("/register", controllers.RegisterUser) // Create user with name, gender, email
+	api.Post("/login", controllers.LoginUser)       // Login with email
+	api.Get("/user/:id", controllers.GetUser)       // Fetch user by ID
+	api.Post("/invite", controllers.InvitePartner)  // Link two partners
 
-	// 🎙️ Session & AI Chat
-	api.Post("/session", controllers.StartSession)
-	api.Post("/moderate", controllers.ModerateChat)
+	// 🌱 Onboarding
+	api.Post("/onboarding", controllers.SubmitOnboarding) // Add goals, challenges, etc.
 
-	// 🔄 Real-time WebSocket Messaging (outside /api group)
+	// 🗣️ Voice Session + AI Moderation
+	api.Post("/session", controllers.StartSession)  // Start session between users
+	api.Post("/moderate", controllers.ModerateChat) // Moderate message via GPT
+
+	// 🔄 Real-time Chat (WebSocket)
 	controllers.SetupWebSocket(app) // GET /ws/:userId
 
-	// 🧘 Post-Session Flow
-	api.Post("/reflection", controllers.SaveReflection)
-	api.Post("/post-resolution", controllers.SavePostResolution)
-	api.Post("/score", controllers.SubmitScore)
-	api.Get("/insights/:userId", controllers.GetInsights)
+	// 🧘 Post-Session Features
+	api.Post("/reflection", controllers.SaveReflection)          // Submit reflection
+	api.Post("/post-resolution", controllers.SavePostResolution) // Gratitude/Bonding form
+	api.Post("/score", controllers.SubmitScore)                  // Communication scoring
+	api.Get("/insights/:userId", controllers.GetInsights)        // Combined insights endpoint
 }
