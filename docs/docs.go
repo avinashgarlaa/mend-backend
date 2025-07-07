@@ -66,7 +66,7 @@ const docTemplate = `{
         },
         "/api/invite": {
             "post": {
-                "description": "Links two users as partners by ID and stores inviter.",
+                "description": "Stores partnership and inviter reference",
                 "consumes": [
                     "application/json"
                 ],
@@ -76,10 +76,10 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "Link partners",
+                "summary": "Link two users as partners",
                 "parameters": [
                     {
-                        "description": "Invite Info (yourId and partnerId)",
+                        "description": "Invite info: yourId, partnerId",
                         "name": "invite",
                         "in": "body",
                         "required": true,
@@ -110,6 +110,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -124,7 +133,7 @@ const docTemplate = `{
         },
         "/api/login": {
             "post": {
-                "description": "Logs in user by email lookup.",
+                "description": "Logs in user by email and password",
                 "consumes": [
                     "application/json"
                 ],
@@ -137,7 +146,7 @@ const docTemplate = `{
                 "summary": "Login a user",
                 "parameters": [
                     {
-                        "description": "Login credentials",
+                        "description": "Login credentials (email \u0026 password)",
                         "name": "credentials",
                         "in": "body",
                         "required": true,
@@ -158,6 +167,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -340,67 +358,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/register": {
-            "post": {
-                "description": "Creates a new user account in the system.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Register a new user",
-                "parameters": [
-                    {
-                        "description": "User Info",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/score": {
             "post": {
                 "description": "Partner submits feedback for a session (used for insights)",
@@ -510,7 +467,7 @@ const docTemplate = `{
         },
         "/api/user/{id}": {
             "get": {
-                "description": "Returns user information by user ID.",
+                "description": "Fetches user info by user ID",
                 "produces": [
                     "application/json"
                 ],
@@ -714,6 +671,9 @@ const docTemplate = `{
                 "colorCode": {
                     "type": "string"
                 },
+                "createdAt": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -730,13 +690,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "invitedBy": {
-                    "description": "✅ NEW",
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
+                "otherChallenge": {
+                    "type": "string"
+                },
+                "otherGoal": {
+                    "type": "string"
+                },
                 "partnerId": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }

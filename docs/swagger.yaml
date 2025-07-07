@@ -111,6 +111,8 @@ definitions:
         type: array
       colorCode:
         type: string
+      createdAt:
+        type: string
       email:
         type: string
       gender:
@@ -122,11 +124,16 @@ definitions:
       id:
         type: string
       invitedBy:
-        description: ✅ NEW
         type: string
       name:
         type: string
+      otherChallenge:
+        type: string
+      otherGoal:
+        type: string
       partnerId:
+        type: string
+      password:
         type: string
     type: object
 host: mend-backend-j0qd.onrender.com
@@ -172,9 +179,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Links two users as partners by ID and stores inviter.
+      description: Stores partnership and inviter reference
       parameters:
-      - description: Invite Info (yourId and partnerId)
+      - description: 'Invite info: yourId, partnerId'
         in: body
         name: invite
         required: true
@@ -197,22 +204,28 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Link partners
+      summary: Link two users as partners
       tags:
       - Users
   /api/login:
     post:
       consumes:
       - application/json
-      description: Logs in user by email lookup.
+      description: Logs in user by email and password
       parameters:
-      - description: Login credentials
+      - description: Login credentials (email & password)
         in: body
         name: credentials
         required: true
@@ -229,6 +242,12 @@ paths:
             $ref: '#/definitions/models.User'
         "400":
           description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties:
               type: string
@@ -349,46 +368,6 @@ paths:
       summary: Submit a session reflection
       tags:
       - Reflections
-  /api/register:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new user account in the system.
-      parameters:
-      - description: User Info
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.User'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.User'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Register a new user
-      tags:
-      - Users
   /api/score:
     post:
       consumes:
@@ -461,7 +440,7 @@ paths:
       - Session
   /api/user/{id}:
     get:
-      description: Returns user information by user ID.
+      description: Fetches user info by user ID
       parameters:
       - description: User ID
         in: path
