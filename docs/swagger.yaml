@@ -302,14 +302,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Adds gender, goals, challenges to a user
+      description: Adds goals and challenges to a user
       parameters:
-      - description: User Onboarding
+      - description: User Onboarding Data
         in: body
         name: onboarding
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          additionalProperties: true
+          type: object
       produces:
       - application/json
       responses:
@@ -410,6 +411,48 @@ paths:
       summary: Submit a session reflection
       tags:
       - Reflections
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user with basic details
+      parameters:
+      - description: Name, Email, Password, Gender
+        in: body
+        name: user
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Users
   /api/score:
     post:
       consumes:

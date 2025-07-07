@@ -18,21 +18,21 @@ import (
 // @Tags         Users
 // @Accept       json
 // @Produce      json
-// @Param        user body map[string]string true "Name, Email, Password"
+// @Param        user body map[string]string true "Name, Email, Password, Gender"
 // @Success      201 {object} models.User
 // @Failure      400,409,500 {object} map[string]string
 // @Router       /api/register [post]
-
 func RegisterUser(c *fiber.Ctx) error {
 	var input struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Gender   string `json:"gender"`
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	if input.Name == "" || input.Email == "" || input.Password == "" {
+	if input.Name == "" || input.Email == "" || input.Password == "" || input.Gender == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing required fields"})
 	}
 
@@ -40,7 +40,6 @@ func RegisterUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Check for duplicate email
 	count, _ := collection.CountDocuments(ctx, fiber.Map{"email": input.Email})
 	if count > 0 {
 		return c.Status(409).JSON(fiber.Map{"error": "Email already registered"})
@@ -53,6 +52,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		Name:      input.Name,
 		Email:     input.Email,
 		Password:  hashed,
+		Gender:    input.Gender,
 		ColorCode: "blue",
 		CreatedAt: time.Now(),
 	}
@@ -62,26 +62,32 @@ func RegisterUser(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save user"})
 	}
 
-	user.Password = "" // Hide before returning
+	user.Password = "" // Don't return password
 	return c.Status(201).JSON(user)
 }
 
 // SubmitOnboarding godoc
 // @Summary      Submit onboarding data
-// @Description  Adds gender, goals, challenges to a user
+// @Description  Adds goals and challenges to a user
 // @Tags         Users
 // @Accept       json
 // @Produce      json
-// @Param        onboarding body models.User true "User Onboarding"
+// @Param        onboarding body map[string]interface{} true "User Onboarding Data"
 // @Success      200 {object} map[string]string
 // @Failure      400,404,500 {object} map[string]string
 // @Router       /api/onboarding [post]
 func SubmitOnboarding(c *fiber.Ctx) error {
-	var data models.User
+	var data struct {
+		UserID         string   `json:"userId"`
+		Goals          []string `json:"goals"`
+		OtherGoal      string   `json:"otherGoal"`
+		Challenges     []string `json:"challenges"`
+		OtherChallenge string   `json:"otherChallenge"`
+	}
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid payload"})
 	}
-	if data.ID == "" {
+	if data.UserID == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing userId"})
 	}
 
@@ -90,14 +96,13 @@ func SubmitOnboarding(c *fiber.Ctx) error {
 	defer cancel()
 
 	update := fiber.Map{
-		"gender":         data.Gender,
 		"goals":          data.Goals,
 		"otherGoal":      data.OtherGoal,
 		"challenges":     data.Challenges,
 		"otherChallenge": data.OtherChallenge,
 	}
 
-	res, err := collection.UpdateOne(ctx, fiber.Map{"id": data.ID}, fiber.Map{"$set": update})
+	res, err := collection.UpdateOne(ctx, fiber.Map{"id": data.UserID}, fiber.Map{"$set": update})
 	if err != nil || res.ModifiedCount == 0 {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update user"})
 	}
