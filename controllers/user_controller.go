@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"mend/database"
@@ -185,16 +186,6 @@ func GetUser(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-// InvitePartner godoc
-// @Summary Link two users as partners
-// @Description Stores partnership and inviter reference
-// @Tags Users
-// @Accept json
-// @Produce json
-// @Param invite body map[string]string true "Invite info: yourId, partnerId"
-// @Success 200 {object} map[string]string
-// @Failure 400,404,500 {object} map[string]string
-// @Router /api/invite [post]
 func InvitePartner(c *fiber.Ctx) error {
 	type InviteRequest struct {
 		YourID    string `json:"yourId"`
@@ -210,12 +201,13 @@ func InvitePartner(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Check if both users exist
+	// Fetch inviter and invitee
 	var inviter, invitee models.User
-	err1 := collection.FindOne(ctx, fiber.Map{"id": body.YourID}).Decode(&inviter)
-	err2 := collection.FindOne(ctx, fiber.Map{"id": body.PartnerID}).Decode(&invitee)
-	if err1 != nil || err2 != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "One or both users not found"})
+	if err := collection.FindOne(ctx, fiber.Map{"id": body.YourID}).Decode(&inviter); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Inviter not found"})
+	}
+	if err := collection.FindOne(ctx, fiber.Map{"id": body.PartnerID}).Decode(&invitee); err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Invitee not found"})
 	}
 
 	// Update inviter
@@ -239,5 +231,72 @@ func InvitePartner(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update partner"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Partners linked successfully"})
+	// ✅ Send Email to invitee
+	subject := "You’ve Been Invited to Mend 💜"
+	bodyHTML := fmt.Sprintf(`
+		<h2>Hello %s,</h2>
+		<p><strong>%s</strong> has invited you to join them on Mend, a space to improve communication and connection.</p>
+		<p>Your Partner ID: <strong>%s</strong></p>
+		<p>Open the app and enter this Partner ID to link accounts.</p>
+		<br/>
+		<p>With love,<br/>The Mend Team</p>
+	`, invitee.Name, inviter.Name, inviter.ID)
+
+	go utils.SendEmail(invitee.Email, subject, bodyHTML)
+
+	return c.JSON(fiber.Map{"message": "Partners linked and invitation email sent"})
+}
+
+// AcceptInvite godoc
+// @Summary Accept an invitation
+// @Description Accepts a partner invite (both users must already exist)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param accept body map[string]string true "Accept info: yourId, partnerId"
+// @Success 200 {object} map[string]string
+// @Failure 400,404,500 {object} map[string]string
+// @Router /api/accept-invite [post]
+func AcceptInvite(c *fiber.Ctx) error {
+	type AcceptRequest struct {
+		YourID    string `json:"yourId"`
+		PartnerID string `json:"partnerId"`
+	}
+
+	var body AcceptRequest
+	if err := c.BodyParser(&body); err != nil || body.YourID == "" || body.PartnerID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid payload"})
+	}
+
+	collection := database.GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Verify both users exist
+	var you, partner models.User
+	err1 := collection.FindOne(ctx, fiber.Map{"id": body.YourID}).Decode(&you)
+	err2 := collection.FindOne(ctx, fiber.Map{"id": body.PartnerID}).Decode(&partner)
+
+	if err1 != nil || err2 != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "One or both users not found"})
+	}
+
+	// Verify that inviter already linked you
+	if partner.PartnerID != body.YourID {
+		return c.Status(400).JSON(fiber.Map{"error": "Invite not initiated by this partner"})
+	}
+
+	// Accept the invite: mutual linkage
+	_, err := collection.UpdateOne(ctx,
+		fiber.Map{"id": body.YourID},
+		fiber.Map{"$set": fiber.Map{
+			"partnerId": body.PartnerID,
+			"invitedBy": body.PartnerID,
+		}},
+	)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to accept invite"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Invite accepted. You're now linked!"})
 }
