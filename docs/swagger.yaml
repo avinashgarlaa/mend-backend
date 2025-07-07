@@ -143,47 +143,15 @@ info:
   title: Mend API
   version: "1.0"
 paths:
-  /api/insights/{userId}:
-    get:
-      description: Returns sessions and reflections submitted by or about the user
-      parameters:
-      - description: User ID
-        in: path
-        name: userId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get communication insights for a user
-      tags:
-      - Insights
-  /api/invite:
+  /api/accept-invite:
     post:
       consumes:
       - application/json
-      description: Stores partnership and inviter reference
+      description: Accepts a partner invite (both users must already exist)
       parameters:
-      - description: 'Invite info: yourId, partnerId'
+      - description: 'Accept info: yourId, partnerId'
         in: body
-        name: invite
+        name: accept
         required: true
         schema:
           additionalProperties:
@@ -216,9 +184,41 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Link two users as partners
+      summary: Accept an invitation
       tags:
       - Users
+  /api/insights/{userId}:
+    get:
+      description: Returns sessions and reflections submitted by or about the user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get communication insights for a user
+      tags:
+      - Insights
   /api/login:
     post:
       consumes:
@@ -521,6 +521,30 @@ paths:
               type: string
             type: object
       summary: Start a new session between partners
+      tags:
+      - Session
+  /api/session/active/:userId:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Session'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Retrieve active (unresolved) session for a user
       tags:
       - Session
   /api/user/{id}:
