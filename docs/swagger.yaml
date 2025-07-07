@@ -298,6 +298,48 @@ paths:
       summary: GPT-4 AI moderation of transcript
       tags:
       - Chat
+  /api/onboarding:
+    post:
+      consumes:
+      - application/json
+      description: Adds gender, goals, challenges to a user
+      parameters:
+      - description: User Onboarding
+        in: body
+        name: onboarding
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit onboarding data
+      tags:
+      - Users
   /api/post-resolution:
     post:
       consumes:

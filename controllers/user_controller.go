@@ -76,7 +76,6 @@ func RegisterUser(c *fiber.Ctx) error {
 // @Success      200 {object} map[string]string
 // @Failure      400,404,500 {object} map[string]string
 // @Router       /api/onboarding [post]
-
 func SubmitOnboarding(c *fiber.Ctx) error {
 	var data models.User
 	if err := c.BodyParser(&data); err != nil {
