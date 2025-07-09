@@ -84,7 +84,7 @@ func idHasSession(clientKey, sessionId string) bool {
 }
 
 // ModerateChat godoc
-// @Summary      Gemini AI moderation of transcript
+// @Summary      OpenAI moderation of transcript
 // @Description  Returns AI feedback + tone warning
 // @Tags         Chat
 // @Accept       json
@@ -110,68 +110,67 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing required fields: transcript or speaker"})
 	}
 
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		return c.Status(500).JSON(fiber.Map{"error": "Gemini API key not configured"})
+	apiKey := os.Getenv("OPENAI_API_KEY")        // For Azure, set AZURE_OPENAI_KEY and use it below
+	endpoint := os.Getenv("OPENAI_ENDPOINT")     // For Azure, e.g., https://your-resource-name.openai.azure.com
+	deployment := os.Getenv("OPENAI_DEPLOYMENT") // For Azure: e.g., "gpt-35-turbo"
+
+	if apiKey == "" || endpoint == "" || deployment == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "OpenAI config missing"})
 	}
 
-	// 🧠 Construct prompt
+	// 🧠 Build prompt
 	prompt := utils.GeneratePrompt(body.Transcript)
 
-	// 📦 Gemini request payload
+	// 🧾 OpenAI Payload
 	payload := map[string]interface{}{
-		"contents": []map[string]interface{}{
-			{
-				"role": "user",
-				"parts": []map[string]string{
-					{"text": prompt},
-				},
-			},
+		"messages": []map[string]string{
+			{"role": "system", "content": "You are a relationship therapist AI helping moderate couple conversations with respectful tone and helpful suggestions."},
+			{"role": "user", "content": prompt},
 		},
+		"temperature": 0.7,
 	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode Gemini payload"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode OpenAI payload"})
 	}
 
-	url := fmt.Sprintf(
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-002:generateContent?key=%s",
-		apiKey,
-	)
+	// 🌐 OpenAI or Azure endpoint
+	url := fmt.Sprintf("%s/openai/deployments/%s/chat/completions?api-version=2024-02-15-preview", endpoint, deployment)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create Gemini request"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create OpenAI request"})
 	}
+
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api-key", apiKey)
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Gemini API request failed"})
+		return c.Status(500).JSON(fiber.Map{"error": "OpenAI request failed"})
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to read Gemini response"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to read OpenAI response"})
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		// Return Gemini error message directly
-		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "Gemini API error", "details": string(bodyBytes)})
+		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "OpenAI API error", "details": string(bodyBytes)})
 	}
 
-	var geminiResp map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &geminiResp); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse Gemini response"})
+	var openaiResp map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &openaiResp); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse OpenAI response"})
 	}
 
-	// ✅ Parse structured Gemini response
-	reply := extractGeminiReply(geminiResp)
+	// ✅ Extract reply from OpenAI
+	reply := extractOpenAIReply(openaiResp)
 	if reply == "" {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid Gemini response structure"})
+		return c.Status(500).JSON(fiber.Map{"error": "Empty response from AI"})
 	}
 
 	// 🔎 Check for interruption warning
@@ -183,37 +182,27 @@ func ModerateChat(c *fiber.Ctx) error {
 	})
 }
 
-// extractGeminiReply parses the Gemini API response and extracts the reply string
-func extractGeminiReply(geminiResp map[string]interface{}) string {
-	candidates, ok := geminiResp["candidates"].([]interface{})
-	if !ok || len(candidates) == 0 {
+// extractOpenAIReply extracts content from chat completion
+func extractOpenAIReply(resp map[string]interface{}) string {
+	choices, ok := resp["choices"].([]interface{})
+	if !ok || len(choices) == 0 {
 		return ""
 	}
 
-	firstCandidate, ok := candidates[0].(map[string]interface{})
+	first, ok := choices[0].(map[string]interface{})
 	if !ok {
 		return ""
 	}
 
-	content, ok := firstCandidate["content"].(map[string]interface{})
+	message, ok := first["message"].(map[string]interface{})
 	if !ok {
 		return ""
 	}
 
-	parts, ok := content["parts"].([]interface{})
-	if !ok || len(parts) == 0 {
-		return ""
-	}
-
-	firstPart, ok := parts[0].(map[string]interface{})
+	content, ok := message["content"].(string)
 	if !ok {
 		return ""
 	}
 
-	text, ok := firstPart["text"].(string)
-	if !ok {
-		return ""
-	}
-
-	return text
+	return content
 }
