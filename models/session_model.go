@@ -1,9 +1,10 @@
 package models
 
 type Message struct {
-	SpeakerID string `json:"speakerId" bson:"speakerId"` // Who spoke
-	Text      string `json:"text" bson:"text"`           // Transcript
-	Timestamp int64  `json:"timestamp" bson:"timestamp"` // Unix time
+	SpeakerId string `json:"speakerId" bson:"speakerId"`
+	SessionId string `json:"sessionId" bson:"sessionId"`
+	Text      string `json:"text" bson:"text"`
+	Timestamp int64  `json:"timestamp" bson:"timestamp"`
 }
 
 type Session struct {

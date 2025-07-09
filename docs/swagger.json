@@ -587,15 +587,18 @@
                 }
             }
         },
-        "/api/session/active/:userId": {
+        "/api/session/active/{userId}": {
             "get": {
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Session"
                 ],
-                "summary": "Retrieve active (unresolved) session for a user",
+                "summary": "Get active (unresolved) session for a user",
                 "parameters": [
                     {
                         "type": "string",
@@ -614,6 +617,59 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/session/end/{sessionId}": {
+            "patch": {
+                "description": "Updates the session's resolved field to true",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Session"
+                ],
+                "summary": "Mark a session as resolved",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -710,16 +766,16 @@
         "models.Message": {
             "type": "object",
             "properties": {
+                "sessionId": {
+                    "type": "string"
+                },
                 "speakerId": {
-                    "description": "Who spoke",
                     "type": "string"
                 },
                 "text": {
-                    "description": "Transcript",
                     "type": "string"
                 },
                 "timestamp": {
-                    "description": "Unix time",
                     "type": "integer"
                 }
             }

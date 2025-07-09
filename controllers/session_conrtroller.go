@@ -9,6 +9,7 @@ import (
 	"mend/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // StartSession godoc
@@ -51,38 +52,62 @@ func StartSession(c *fiber.Ctx) error {
 	return c.Status(201).JSON(session)
 }
 
-// controllers/session_controller.go
-
 // GetActiveSession godoc
-// @Summary      Retrieve active (unresolved) session for a user
-// @Tags         Session
-// @Produce      json
-// @Param        userId path string true "User ID"
-// @Success      200 {object} models.Session
-// @Failure      404 {object} map[string]string
-// @Router       /api/session/active/:userId [get]
+// @Summary Get active (unresolved) session for a user
+// @Tags Session
+// @Accept json
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} models.Session
+// @Failure 404 {object} map[string]string
+// @Router /api/session/active/{userId} [get]
 func GetActiveSession(c *fiber.Ctx) error {
 	userId := c.Params("userId")
-	if userId == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Missing userId"})
-	}
-
-	sessions := database.GetCollection("sessions")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var session models.Session
-	err := sessions.FindOne(ctx, fiber.Map{
+	filter := fiber.Map{
 		"$or": []fiber.Map{
 			{"partnerA": userId},
 			{"partnerB": userId},
 		},
 		"resolved": false,
-	}).Decode(&session)
-
-	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "No active session found"})
 	}
 
+	var session models.Session
+	err := database.GetCollection("sessions").FindOne(ctx, filter).Decode(&session)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "No active session"})
+	}
 	return c.JSON(session)
+}
+
+// EndSession godoc
+// @Summary      Mark a session as resolved
+// @Description  Updates the session's resolved field to true
+// @Tags         Session
+// @Accept       json
+// @Produce      json
+// @Param        sessionId path string true "Session ID"
+// @Success      200 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /api/session/end/{sessionId} [patch]
+func EndSession(c *fiber.Ctx) error {
+	sessionId := c.Params("sessionId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": sessionId}
+	update := bson.M{"$set": bson.M{"resolved": true}}
+
+	result, err := database.GetCollection("sessions").UpdateOne(ctx, filter, update)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to end session"})
+	}
+	if result.MatchedCount == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Session not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Session ended successfully"})
 }

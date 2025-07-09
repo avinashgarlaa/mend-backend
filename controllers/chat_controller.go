@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"mend/database"
@@ -15,63 +16,70 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-// WebSocket clients map
+// WebSocket clients: key = userId:sessionId
 var clients = make(map[string]*websocket.Conn)
 
-// SetupWebSocket adds the real-time chat endpoint
-func SetupWebSocket(app *fiber.App) {
-	app.Use("/ws/:userId", websocket.New(func(c *websocket.Conn) {
-		userId := c.Params("userId")
-		clients[userId] = c
-		defer func() {
-			c.Close()
-			delete(clients, userId)
-		}()
+// handleWebSocket handles real-time chat messages
+func HandleWebSocket(c *websocket.Conn) {
+	userId := c.Params("userId")
+	sessionId := c.Params("sessionId")
+	clientKey := userId + ":" + sessionId
 
-		for {
-			_, msg, err := c.ReadMessage()
-			if err != nil {
-				break
-			}
+	clients[clientKey] = c
+	defer func() {
+		c.Close()
+		delete(clients, clientKey)
+	}()
 
-			var message models.Message
-			if err := json.Unmarshal(msg, &message); err != nil {
-				continue
-			}
-			message.Timestamp = time.Now().Unix()
-
-			// Broadcast to other users
-			for id, conn := range clients {
-				if id != userId {
-					conn.WriteMessage(websocket.TextMessage, msg)
-				}
-			}
-
-			// Persist in DB
-			go appendMessageToSession(userId, message)
+	for {
+		_, msg, err := c.ReadMessage()
+		if err != nil {
+			break
 		}
-	}))
+
+		var message models.Message
+		if err := json.Unmarshal(msg, &message); err != nil {
+			continue
+		}
+		message.Timestamp = time.Now().Unix()
+
+		// 🛡️ Simple interruption moderation
+		if strings.Contains(strings.ToLower(message.Text), "interrupt") {
+			c.WriteMessage(websocket.TextMessage, []byte("INTERRUPT: Please wait your turn."))
+			continue
+		}
+
+		// 💾 Save to DB
+		go appendMessageToSessionByID(message.SessionId, message)
+
+		// 📤 Broadcast to other clients in the session
+		for id, conn := range clients {
+			if id != clientKey && idHasSession(id, sessionId) {
+				conn.WriteMessage(websocket.TextMessage, msg)
+			}
+		}
+	}
 }
 
-// Appends message to active session in DB
-func appendMessageToSession(userId string, msg models.Message) {
+// appendMessageToSessionByID saves a message to MongoDB session by sessionId
+func appendMessageToSessionByID(sessionId string, msg models.Message) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	filter := bson.M{"_id": sessionId}
+	update := bson.M{"$push": bson.M{"messages": msg}}
+
 	sessions := database.GetCollection("sessions")
-	filter := fiber.Map{
-		"$or": []fiber.Map{
-			{"partnerA": userId},
-			{"partnerB": userId},
-		},
-		"resolved": false,
-	}
-	update := fiber.Map{
-		"$push": fiber.Map{"messages": msg},
-	}
 	_, _ = sessions.UpdateOne(ctx, filter, update)
+}
+
+// idHasSession checks if a client ID belongs to a session
+func idHasSession(clientKey, sessionId string) bool {
+	parts := strings.Split(clientKey, ":")
+	return len(parts) == 2 && parts[1] == sessionId
 }
 
 // ModerateChat godoc

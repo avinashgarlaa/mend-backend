@@ -4,33 +4,34 @@ import (
 	"mend/controllers"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
 func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 
 	// 👤 User Management
-	api.Post("/register", controllers.RegisterUser) // Create user with name, gender, email
-	api.Post("/login", controllers.LoginUser)       // Login with email
-	api.Get("/user/:id", controllers.GetUser)       // Fetch user by ID
+	api.Post("/register", controllers.RegisterUser)
+	api.Post("/login", controllers.LoginUser)
+	api.Get("/user/:id", controllers.GetUser)
 	api.Post("/invite", controllers.InvitePartner)
 	api.Post("/accept-invite", controllers.AcceptInvite)
-	// Link two partners
 
 	// 🌱 Onboarding
-	api.Post("/onboarding", controllers.SubmitOnboarding) // Add goals, challenges, etc.
+	api.Post("/onboarding", controllers.SubmitOnboarding)
 
 	// 🗣️ Voice Session + AI Moderation
 	api.Post("/session", controllers.StartSession)
-	app.Get("/api/session/active/:userId", controllers.GetActiveSession) // Start session between users
-	api.Post("/moderate", controllers.ModerateChat)                      // Moderate message via GPT
+	api.Get("/session/active/:userId", controllers.GetActiveSession)
+	api.Patch("/session/end/:sessionId", controllers.EndSession)
+	api.Post("/moderate", controllers.ModerateChat)
 
-	// 🔄 Real-time Chat (WebSocket)
-	controllers.SetupWebSocket(app) // GET /ws/:userId
+	// 🔄 WebSocket Chat
+	app.Use("/ws/:userId/:sessionId", websocket.New(controllers.HandleWebSocket))
 
 	// 🧘 Post-Session Features
-	api.Post("/reflection", controllers.SaveReflection)          // Submit reflection
-	api.Post("/post-resolution", controllers.SavePostResolution) // Gratitude/Bonding form
-	api.Post("/score", controllers.SubmitScore)                  // Communication scoring
-	api.Get("/insights/:userId", controllers.GetInsights)        // Combined insights endpoint
+	api.Post("/reflection", controllers.SaveReflection)
+	api.Post("/post-resolution", controllers.SavePostResolution)
+	api.Post("/score", controllers.SubmitScore)
+	api.Get("/insights/:userId", controllers.GetInsights)
 }

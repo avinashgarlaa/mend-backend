@@ -25,14 +25,13 @@ definitions:
     type: object
   models.Message:
     properties:
+      sessionId:
+        type: string
       speakerId:
-        description: Who spoke
         type: string
       text:
-        description: Transcript
         type: string
       timestamp:
-        description: Unix time
         type: integer
     type: object
   models.PostResolution:
@@ -523,8 +522,10 @@ paths:
       summary: Start a new session between partners
       tags:
       - Session
-  /api/session/active/:userId:
+  /api/session/active/{userId}:
     get:
+      consumes:
+      - application/json
       parameters:
       - description: User ID
         in: path
@@ -544,7 +545,42 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Retrieve active (unresolved) session for a user
+      summary: Get active (unresolved) session for a user
+      tags:
+      - Session
+  /api/session/end/{sessionId}:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the session's resolved field to true
+      parameters:
+      - description: Session ID
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Mark a session as resolved
       tags:
       - Session
   /api/user/{id}:
