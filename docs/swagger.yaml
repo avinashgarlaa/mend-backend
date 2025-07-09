@@ -266,7 +266,7 @@ paths:
       - application/json
       description: Returns AI feedback + tone warning
       parameters:
-      - description: Transcript, Speaker
+      - description: Transcript, Context (optional), Speaker
         in: body
         name: input
         required: true

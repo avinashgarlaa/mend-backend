@@ -210,7 +210,7 @@ const docTemplate = `{
                 "summary": "Gemini AI moderation of transcript",
                 "parameters": [
                     {
-                        "description": "Transcript, Speaker",
+                        "description": "Transcript, Context (optional), Speaker",
                         "name": "input",
                         "in": "body",
                         "required": true,
