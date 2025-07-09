@@ -142,7 +142,21 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse GPT response"})
 	}
 
-	reply := gptResponse["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
+	// ✅ Safely extract the message content
+	choices, ok := gptResponse["choices"].([]interface{})
+	if !ok || len(choices) == 0 {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT response: no choices"})
+	}
+
+	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT message structure"})
+	}
+
+	reply, ok := message["content"].(string)
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT reply content"})
+	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"aiReply":   reply,
