@@ -109,22 +109,32 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing transcript or speaker"})
 	}
 
+	// 🧠 Generate AI-friendly prompt
 	prompt := utils.GeneratePrompt(body.Transcript)
-	apiKey := os.Getenv("GEMINI_API_KEY") // ⚠️ Make sure it's set
 
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "Gemini API key not configured"})
+	}
+
+	// 📦 Gemini JSON request payload
 	payload := map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
+				"role": "user",
 				"parts": []map[string]string{
 					{"text": prompt},
 				},
-				"role": "user",
 			},
 		},
 	}
 
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode payload"})
+	}
 
+	// 🌐 Send request to Gemini API
 	req, err := http.NewRequest(
 		"POST",
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key="+apiKey,
@@ -142,22 +152,49 @@ func ModerateChat(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, _ := io.ReadAll(resp.Body)
+	// 📥 Parse response body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to read Gemini response"})
+	}
 
 	var geminiResp map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &geminiResp); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse Gemini response"})
 	}
 
+	// ✅ Extract reply text from Gemini structure
 	candidates, ok := geminiResp["candidates"].([]interface{})
 	if !ok || len(candidates) == 0 {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid Gemini response"})
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid Gemini response: no candidates"})
 	}
 
-	content := candidates[0].(map[string]interface{})["content"]
-	parts := content.(map[string]interface{})["parts"].([]interface{})
-	reply := parts[0].(map[string]interface{})["text"].(string)
+	candidate, ok := candidates[0].(map[string]interface{})
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid candidate structure"})
+	}
 
+	content, ok := candidate["content"].(map[string]interface{})
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Missing content in Gemini response"})
+	}
+
+	parts, ok := content["parts"].([]interface{})
+	if !ok || len(parts) == 0 {
+		return c.Status(500).JSON(fiber.Map{"error": "Missing parts in Gemini response"})
+	}
+
+	part, ok := parts[0].(map[string]interface{})
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid part structure"})
+	}
+
+	reply, ok := part["text"].(string)
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid reply text"})
+	}
+
+	// 🧠 Return AI reply + interruption warning
 	return c.Status(200).JSON(fiber.Map{
 		"aiReply":   reply,
 		"interrupt": utils.InterruptWarning(body.Speaker),
