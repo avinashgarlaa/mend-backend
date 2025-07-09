@@ -109,9 +109,14 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing transcript or speaker"})
 	}
 
+	// Generate GPT prompt using utils
 	prompt := utils.GeneratePrompt(body.Transcript)
 	openaiKey := os.Getenv("OPENAI_API_KEY")
+	if openaiKey == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "OpenAI key not configured"})
+	}
 
+	// Create GPT request payload
 	payload := map[string]interface{}{
 		"model": "gpt-4",
 		"messages": []map[string]string{
@@ -119,11 +124,16 @@ func ModerateChat(c *fiber.Ctx) error {
 			{"role": "user", "content": prompt},
 		},
 	}
-	jsonData, _ := json.Marshal(payload)
 
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode GPT payload"})
+	}
+
+	// Make OpenAI API call
 	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(jsonData))
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to prepare GPT request"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create GPT request"})
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+openaiKey)
@@ -135,31 +145,34 @@ func ModerateChat(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, _ := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to read GPT response"})
+	}
 
 	var gptResponse map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &gptResponse); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse GPT response"})
 	}
 
-	// ✅ Safely extract the message content
+	// ✅ Parse GPT reply safely
 	choices, ok := gptResponse["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT response: no choices"})
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT response structure"})
 	}
 
-	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
-	if !ok {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT message structure"})
-	}
-
+	choice := choices[0].(map[string]interface{})
+	message := choice["message"].(map[string]interface{})
 	reply, ok := message["content"].(string)
 	if !ok {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT reply content"})
+		return c.Status(500).JSON(fiber.Map{"error": "Missing reply in GPT response"})
 	}
+
+	// 🧠 Use speaker name for interruption reminder
+	interruptWarning := utils.InterruptWarning(body.Speaker)
 
 	return c.Status(200).JSON(fiber.Map{
 		"aiReply":   reply,
-		"interrupt": utils.InterruptWarning(body.Speaker),
+		"interrupt": interruptWarning,
 	})
 }
