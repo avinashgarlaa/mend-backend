@@ -135,9 +135,8 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode Gemini payload"})
 	}
 
-	// ✅ Use gemini-1.5-flash model endpoint to avoid quota issues
 	url := fmt.Sprintf(
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=%s",
+		"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-002:generateContent?key=%s",
 		apiKey,
 	)
 
