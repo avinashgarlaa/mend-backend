@@ -83,7 +83,7 @@ func idHasSession(clientKey, sessionId string) bool {
 }
 
 // ModerateChat godoc
-// @Summary      GPT-4 AI moderation of transcript
+// @Summary      Gemini AI moderation of transcript
 // @Description  Returns AI feedback + tone warning
 // @Tags         Chat
 // @Accept       json
@@ -109,70 +109,57 @@ func ModerateChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing transcript or speaker"})
 	}
 
-	// Generate GPT prompt using utils
 	prompt := utils.GeneratePrompt(body.Transcript)
-	openaiKey := os.Getenv("OPENAI_API_KEY")
-	if openaiKey == "" {
-		return c.Status(500).JSON(fiber.Map{"error": "OpenAI key not configured"})
-	}
+	apiKey := os.Getenv("GEMINI_API_KEY") // ⚠️ Make sure it's set
 
-	// Create GPT request payload
 	payload := map[string]interface{}{
-		"model": "gpt-4",
-		"messages": []map[string]string{
-			{"role": "system", "content": "You are a helpful AI couples therapist."},
-			{"role": "user", "content": prompt},
+		"contents": []map[string]interface{}{
+			{
+				"parts": []map[string]string{
+					{"text": prompt},
+				},
+				"role": "user",
+			},
 		},
 	}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encode GPT payload"})
-	}
+	jsonData, _ := json.Marshal(payload)
 
-	// Make OpenAI API call
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(jsonData))
+	req, err := http.NewRequest(
+		"POST",
+		"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key="+apiKey,
+		bytes.NewBuffer(jsonData),
+	)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create GPT request"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create Gemini request"})
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+openaiKey)
 
-	client := &http.Client{Timeout: 20 * time.Second}
+	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "OpenAI request failed"})
+		return c.Status(500).JSON(fiber.Map{"error": "Gemini request failed"})
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to read GPT response"})
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
+	var geminiResp map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &geminiResp); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse Gemini response"})
 	}
 
-	var gptResponse map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &gptResponse); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to parse GPT response"})
+	candidates, ok := geminiResp["candidates"].([]interface{})
+	if !ok || len(candidates) == 0 {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid Gemini response"})
 	}
 
-	// ✅ Parse GPT reply safely
-	choices, ok := gptResponse["choices"].([]interface{})
-	if !ok || len(choices) == 0 {
-		return c.Status(500).JSON(fiber.Map{"error": "Invalid GPT response structure"})
-	}
-
-	choice := choices[0].(map[string]interface{})
-	message := choice["message"].(map[string]interface{})
-	reply, ok := message["content"].(string)
-	if !ok {
-		return c.Status(500).JSON(fiber.Map{"error": "Missing reply in GPT response"})
-	}
-
-	// 🧠 Use speaker name for interruption reminder
-	interruptWarning := utils.InterruptWarning(body.Speaker)
+	content := candidates[0].(map[string]interface{})["content"]
+	parts := content.(map[string]interface{})["parts"].([]interface{})
+	reply := parts[0].(map[string]interface{})["text"].(string)
 
 	return c.Status(200).JSON(fiber.Map{
 		"aiReply":   reply,
-		"interrupt": interruptWarning,
+		"interrupt": utils.InterruptWarning(body.Speaker),
 	})
 }

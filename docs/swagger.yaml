@@ -294,7 +294,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: GPT-4 AI moderation of transcript
+      summary: Gemini AI moderation of transcript
       tags:
       - Chat
   /api/onboarding:

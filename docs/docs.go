@@ -207,7 +207,7 @@ const docTemplate = `{
                 "tags": [
                     "Chat"
                 ],
-                "summary": "GPT-4 AI moderation of transcript",
+                "summary": "Gemini AI moderation of transcript",
                 "parameters": [
                     {
                         "description": "Transcript, Speaker",
