@@ -17,6 +17,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/register", controllers.RegisterUser)
 	api.Post("/login", controllers.LoginUser)
 	api.Get("/user/:id", controllers.GetUser)
+	api.Get("/session/score/:sessionId", controllers.GetSessionScore)
 
 	api.Post("/invite", controllers.InvitePartner)
 	api.Post("/accept-invite", controllers.AcceptInvite)

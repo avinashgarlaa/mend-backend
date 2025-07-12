@@ -77,16 +77,21 @@ func SubmitScore(c *fiber.Ctx) error {
 }
 
 // fetchSessionMessages retrieves messages for a given session
-func fetchSessionMessages(sessionId string) ([]models.Message, error) {
+func fetchSessionMessages(sessionID string) ([]models.Message, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var session models.Session
-	if err := database.GetCollection("sessions").
-		FindOne(ctx, bson.M{"_id": sessionId}).
-		Decode(&session); err != nil {
+	sessionsColl := database.GetCollection("sessions")
+
+	var session struct {
+		Messages []models.Message `bson:"messages"`
+	}
+
+	err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionID}).Decode(&session)
+	if err != nil {
 		return nil, err
 	}
+
 	return session.Messages, nil
 }
 
@@ -224,4 +229,20 @@ func autoGenerateScore(sessionId string, partnerId string) {
 	if err != nil {
 		fmt.Println("❌ Failed to save AI score:", err)
 	}
+}
+
+func GetSessionScore(c *fiber.Ctx) error {
+	sessionId := c.Params("sessionId")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sessionsColl := database.GetCollection("sessions")
+	var result bson.M
+	err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionId}).Decode(&result)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Session not found"})
+	}
+
+	return c.JSON(result)
 }

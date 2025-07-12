@@ -162,34 +162,38 @@ func EndSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Session ended successfully"})
 }
 
-// Helper: Generate and save AI score only if missing
 func autoGenerateScoreIfMissing(sessionID string, userID string, scoreField string) {
+	fmt.Println("🧠 Starting score generation for", userID, scoreField)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	sessionsColl := database.GetCollection("sessions")
+
 	var sessionDoc map[string]interface{}
 	err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionID}).Decode(&sessionDoc)
 	if err != nil {
-		fmt.Println("⚠️ Failed to fetch session for score check:", err)
+		fmt.Println("❌ Cannot find session for scoring:", err)
 		return
 	}
 
-	// Skip if already has a score
-	if sessionDoc[scoreField] != nil {
-		return
+	// Check if score field exists and is valid
+	if raw, exists := sessionDoc[scoreField]; exists {
+		if m, ok := raw.(map[string]interface{}); ok && len(m) > 0 {
+			fmt.Println("⚠️ Score already exists, skipping")
+			return
+		}
 	}
 
-	// ✅ Generate and save score
+	// Fetch messages
 	messages, err := fetchSessionMessages(sessionID)
-	if err != nil {
-		fmt.Println("⚠️ Failed to fetch messages for scoring:", err)
+	if err != nil || len(messages) == 0 {
+		fmt.Println("❌ No messages found for AI scoring")
 		return
 	}
 
 	aiScore, err := generateAIScore(messages)
 	if err != nil {
-		fmt.Println("⚠️ Failed to generate AI score:", err)
+		fmt.Println("❌ AI Scoring failed:", err)
 		return
 	}
 
@@ -202,6 +206,8 @@ func autoGenerateScoreIfMissing(sessionID string, userID string, scoreField stri
 		bson.M{"$set": bson.M{scoreField: aiScore}},
 	)
 	if err != nil {
-		fmt.Println("⚠️ Failed to save AI score:", err)
+		fmt.Println("❌ Failed to save AI score:", err)
+	} else {
+		fmt.Println("✅ Saved AI score for", userID)
 	}
 }
