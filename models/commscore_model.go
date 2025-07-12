@@ -1,13 +1,13 @@
 package models
 
 type CommunicationScore struct {
-	SessionID      string `json:"sessionId" bson:"sessionId"` // Which session this score is for
-	PartnerID      string `json:"partnerId" bson:"partnerId"` // Who submitted this
-	Empathy        int    `json:"empathy" bson:"empathy"`
-	Listening      int    `json:"listening" bson:"listening"`
-	Clarity        int    `json:"clarity" bson:"clarity"`
-	Respect        int    `json:"respect" bson:"respect"`
-	Responsiveness int    `json:"responsiveness" bson:"responsiveness"`
-	OpenMindedness int    `json:"openMindedness" bson:"openMindedness"`
-	CreatedAt      int64  `json:"createdAt" bson:"createdAt"`
+	SessionID          string `json:"sessionId" bson:"sessionId"`
+	PartnerID          string `json:"partnerId" bson:"partnerId"`
+	Empathy            int    `json:"empathy" bson:"empathy"`
+	Listening          int    `json:"listening" bson:"listening"`
+	Respect            int    `json:"respect" bson:"respect"`
+	Clarity            int    `json:"clarity" bson:"clarity"`
+	ConflictResolution int    `json:"conflictResolution" bson:"conflictResolution"`
+	Summary            string `json:"summary,omitempty" bson:"summary,omitempty"`
+	CreatedAt          int64  `json:"createdAt" bson:"createdAt"`
 }

@@ -4,13 +4,17 @@ import "fmt"
 
 // GeneratePrompt returns an AI-friendly instruction for conflict resolution
 // Enhanced version with tone included
-func GeneratePrompt(context string) string {
-	return fmt.Sprintf(`You are an emotionally intelligent AI therapist.
-The couple is discussing the following issue: "%s"
-- Provide a calm, validating response.
-- Ask a brief open-ended question to encourage mutual understanding.
-- Do not assign blame.
-- Keep it under 80 words.`, context)
+func GeneratePrompt(transcript string) string {
+	return fmt.Sprintf(`You're a licensed relationship therapist. Here's a message from a couple's conversation:
+
+"%s"
+
+Your role is to:
+1. Detect if there's emotional tension, conflict, or misunderstanding.
+2. Respond therapeutically — encourage empathy, ask reflective questions, or help de-escalate.
+3. Use a warm, calm tone. Be brief but impactful.
+
+Provide only your therapeutic message response.`, transcript)
 }
 
 // InterruptWarning returns a gentle reminder when one partner interrupts
