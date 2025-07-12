@@ -106,7 +106,7 @@ func GetActiveSession(c *fiber.Ctx) error {
 
 // EndSession godoc
 // @Summary      Mark a session as resolved
-// @Description  Updates the session's resolved field to true and notifies partner via email
+// @Description  Updates the session's resolved field to true, sends partner email, and generates AI scores
 // @Tags         Session
 // @Accept       json
 // @Produce      json
@@ -120,42 +120,88 @@ func EndSession(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	filter := bson.M{"_id": sessionId}
-	update := bson.M{"$set": bson.M{"resolved": true}}
-
-	// Update session
 	sessionsColl := database.GetCollection("sessions")
-	result, err := sessionsColl.UpdateOne(ctx, filter, update)
+	usersColl := database.GetCollection("users")
+
+	// 🔍 Find session
+	var session models.Session
+	err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionId}).Decode(&session)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to end session"})
-	}
-	if result.MatchedCount == 0 {
 		return c.Status(404).JSON(fiber.Map{"error": "Session not found"})
 	}
 
-	// Fetch session to send email
-	var session models.Session
-	err = sessionsColl.FindOne(ctx, filter).Decode(&session)
-	if err == nil {
-		usersColl := database.GetCollection("users")
-
-		var partnerA, partnerB models.User
-		errA := usersColl.FindOne(ctx, bson.M{"id": session.PartnerA}).Decode(&partnerA)
-		errB := usersColl.FindOne(ctx, bson.M{"id": session.PartnerB}).Decode(&partnerB)
-		if errA == nil && errB == nil {
-			subject := "Your Mend Session Has Ended 💜"
-			body := fmt.Sprintf(`
-				<h2>Hi %s,</h2>
-				<p>Your session with <strong>%s</strong> has just ended.</p>
-				<p>You can review insights and reflections inside the app.</p>
-				<p><i>Session ID:</i> <strong>%s</strong></p>
-				<br/>
-				<p>With warmth,<br/>The Mend Team</p>
-			`, partnerB.Name, partnerA.Name, session.ID)
-
-			go utils.SendEmail(partnerB.Email, subject, body)
-		}
+	// ✅ Update resolved flag
+	_, err = sessionsColl.UpdateOne(ctx, bson.M{"_id": sessionId}, bson.M{
+		"$set": bson.M{"resolved": true},
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to mark session as resolved"})
 	}
 
+	// 📧 Notify partner via email
+	var partnerA, partnerB models.User
+	errA := usersColl.FindOne(ctx, bson.M{"id": session.PartnerA}).Decode(&partnerA)
+	errB := usersColl.FindOne(ctx, bson.M{"id": session.PartnerB}).Decode(&partnerB)
+	if errA == nil && errB == nil {
+		subject := "Your Mend Session Has Ended 💜"
+		body := fmt.Sprintf(`
+			<h2>Hi %s,</h2>
+			<p>Your session with <strong>%s</strong> has just ended.</p>
+			<p>You can now reflect and view insights inside the app.</p>
+			<p><i>Session ID:</i> <strong>%s</strong></p>
+			<br/>
+			<p>With warmth,<br/>The Mend Team</p>
+		`, partnerB.Name, partnerA.Name, session.ID)
+		go utils.SendEmail(partnerB.Email, subject, body)
+	}
+
+	// 🧠 Auto-generate AI scores for both partners (if not already present)
+	go autoGenerateScoreIfMissing(sessionId, session.PartnerA, "scoreA")
+	go autoGenerateScoreIfMissing(sessionId, session.PartnerB, "scoreB")
+
 	return c.JSON(fiber.Map{"message": "Session ended successfully"})
+}
+
+// Helper: Generate and save AI score only if missing
+func autoGenerateScoreIfMissing(sessionID string, userID string, scoreField string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sessionsColl := database.GetCollection("sessions")
+	var sessionDoc map[string]interface{}
+	err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionID}).Decode(&sessionDoc)
+	if err != nil {
+		fmt.Println("⚠️ Failed to fetch session for score check:", err)
+		return
+	}
+
+	// Skip if already has a score
+	if sessionDoc[scoreField] != nil {
+		return
+	}
+
+	// ✅ Generate and save score
+	messages, err := fetchSessionMessages(sessionID)
+	if err != nil {
+		fmt.Println("⚠️ Failed to fetch messages for scoring:", err)
+		return
+	}
+
+	aiScore, err := generateAIScore(messages)
+	if err != nil {
+		fmt.Println("⚠️ Failed to generate AI score:", err)
+		return
+	}
+
+	aiScore.SessionID = sessionID
+	aiScore.PartnerID = userID
+	aiScore.CreatedAt = time.Now().Unix()
+
+	_, err = sessionsColl.UpdateOne(ctx,
+		bson.M{"_id": sessionID},
+		bson.M{"$set": bson.M{scoreField: aiScore}},
+	)
+	if err != nil {
+		fmt.Println("⚠️ Failed to save AI score:", err)
+	}
 }
