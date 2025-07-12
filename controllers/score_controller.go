@@ -187,50 +187,6 @@ func extractOpenAIText(resp map[string]interface{}) string {
 	return message["content"].(string)
 }
 
-func autoGenerateScore(sessionId string, partnerId string) {
-	messages, err := fetchSessionMessages(sessionId)
-	if err != nil {
-		fmt.Println("❌ Failed to fetch messages:", err)
-		return
-	}
-
-	score, err := generateAIScore(messages)
-	if err != nil {
-		fmt.Println("❌ Failed to generate AI score:", err)
-		return
-	}
-
-	score.SessionID = sessionId
-	score.PartnerID = partnerId
-	score.CreatedAt = time.Now().Unix()
-
-	sessionsColl := database.GetCollection("sessions")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var session struct {
-		PartnerA string `bson:"partnerA"`
-		PartnerB string `bson:"partnerB"`
-	}
-	if err := sessionsColl.FindOne(ctx, bson.M{"_id": sessionId}).Decode(&session); err != nil {
-		fmt.Println("❌ Session not found:", err)
-		return
-	}
-
-	updateField := "scoreA"
-	if partnerId == session.PartnerB {
-		updateField = "scoreB"
-	}
-
-	_, err = sessionsColl.UpdateOne(ctx,
-		bson.M{"_id": sessionId},
-		bson.M{"$set": bson.M{updateField: score}},
-	)
-	if err != nil {
-		fmt.Println("❌ Failed to save AI score:", err)
-	}
-}
-
 func GetSessionScore(c *fiber.Ctx) error {
 	sessionId := c.Params("sessionId")
 

@@ -176,11 +176,18 @@ func autoGenerateScoreIfMissing(sessionID string, userID string, scoreField stri
 		return
 	}
 
-	// Check if score field exists and is valid
 	if raw, exists := sessionDoc[scoreField]; exists {
-		if m, ok := raw.(map[string]interface{}); ok && len(m) > 0 {
-			fmt.Println("⚠️ Score already exists, skipping")
-			return
+		if m, ok := raw.(map[string]interface{}); ok {
+			if val, exists := m["createdAt"]; exists {
+				if timestamp, ok := val.(int64); ok && timestamp > 0 {
+					fmt.Println("⚠️ Score already exists (has timestamp), skipping")
+					return
+				}
+				if timestamp, ok := val.(float64); ok && int64(timestamp) > 0 {
+					fmt.Println("⚠️ Score already exists (has timestamp), skipping")
+					return
+				}
+			}
 		}
 	}
 
