@@ -6,6 +6,7 @@ import (
 
 	"mend/database"
 	"mend/models"
+	"mend/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -35,6 +36,8 @@ func SavePostResolution(c *fiber.Ctx) error {
 		})
 	}
 
+	// 🆔 Generate unique ID
+	data.ID = utils.GeneratePartnerID()
 	data.Timestamp = time.Now().Unix()
 
 	collection := database.GetCollection("postResolution")
@@ -47,8 +50,6 @@ func SavePostResolution(c *fiber.Ctx) error {
 			"error": "Failed to save post-resolution entry",
 		})
 	}
-
-	// 🧠 Optional AI: analyze gratitude tone, bonding index, etc.
 
 	return c.Status(fiber.StatusCreated).JSON(data)
 }
