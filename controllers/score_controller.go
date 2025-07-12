@@ -30,7 +30,7 @@ func SubmitScore(c *fiber.Ctx) error {
 	score.CreatedAt = time.Now().Unix()
 
 	// 🧠 Auto-generate score via AI if fields are zero
-	if score.Empathy == 0 && score.Respect == 0 && score.Listening == 0 {
+	if score.Empathy == 0 && score.Respect == 0 && score.Listening == 0 && score.Clarity == 0 && score.ConflictResolution == 0 {
 		messages, err := fetchSessionMessages(score.SessionID)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch session messages"})
