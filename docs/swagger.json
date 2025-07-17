@@ -78,7 +78,7 @@
         },
         "/api/insights/{userId}": {
             "get": {
-                "description": "Returns sessions and reflections submitted by or about the user",
+                "description": "Returns sessions, reflections, scores, and emotional bonding data for a user",
                 "produces": [
                     "application/json"
                 ],
@@ -188,62 +188,6 @@
                 }
             }
         },
-        "/api/moderate": {
-            "post": {
-                "description": "Returns AI feedback + tone warning",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chat"
-                ],
-                "summary": "Gemini AI moderation of transcript",
-                "parameters": [
-                    {
-                        "description": "Transcript, Context (optional), Speaker",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/onboarding": {
             "post": {
                 "description": "Adds goals and challenges to a user",
@@ -311,7 +255,7 @@
         },
         "/api/post-resolution": {
             "post": {
-                "description": "Stores emotional bonding data after a session",
+                "description": "Stores emotional bonding and gratitude reflection after a session",
                 "consumes": [
                     "application/json"
                 ],
@@ -337,62 +281,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/reflection": {
-            "post": {
-                "description": "Stores a post-session reflection entry from a user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reflections"
-                ],
-                "summary": "Submit a session reflection",
-                "parameters": [
-                    {
-                        "description": "Reflection Data",
-                        "name": "reflection",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Reflection"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Reflection"
+                            "$ref": "#/definitions/models.PostResolution"
                         }
                     },
                     "400": {
@@ -480,64 +369,9 @@
                 }
             }
         },
-        "/api/score": {
-            "post": {
-                "description": "Partner submits feedback for a session (used for insights)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Communication"
-                ],
-                "summary": "Submit communication score",
-                "parameters": [
-                    {
-                        "description": "Score Data",
-                        "name": "score",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CommunicationScore"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/session": {
             "post": {
-                "description": "Creates a session document in MongoDB",
+                "description": "Creates a session document in MongoDB and notifies partner via email",
                 "consumes": [
                     "application/json"
                 ],
@@ -629,7 +463,7 @@
         },
         "/api/session/end/{sessionId}": {
             "patch": {
-                "description": "Updates the session's resolved field to true",
+                "description": "Updates the session's resolved field to true, sends partner email, and generates AI scores",
                 "consumes": [
                     "application/json"
                 ],
@@ -735,6 +569,9 @@
                 "clarity": {
                     "type": "integer"
                 },
+                "conflictResolution": {
+                    "type": "integer"
+                },
                 "createdAt": {
                     "type": "integer"
                 },
@@ -744,21 +581,16 @@
                 "listening": {
                     "type": "integer"
                 },
-                "openMindedness": {
-                    "type": "integer"
-                },
                 "partnerId": {
-                    "description": "Who submitted this",
                     "type": "string"
                 },
                 "respect": {
                     "type": "integer"
                 },
-                "responsiveness": {
-                    "type": "integer"
-                },
                 "sessionId": {
-                    "description": "Which session this score is for",
+                    "type": "string"
+                },
+                "summary": {
                     "type": "string"
                 }
             }
@@ -783,53 +615,28 @@
         "models.PostResolution": {
             "type": "object",
             "properties": {
-                "bondingActivity": {
-                    "description": "e.g., \"Go for a walk together\"",
-                    "type": "string"
+                "attachmentScore": {
+                    "description": "Optional 1-5",
+                    "type": "integer"
                 },
                 "gratitude": {
-                    "description": "e.g., \"I'm grateful for your honesty\"",
+                    "description": "Freeform reflection",
                     "type": "string"
                 },
-                "reflection": {
-                    "description": "e.g., \"I felt better after the session\"",
-                    "type": "string"
-                },
-                "sessionId": {
-                    "description": "Associated session ID",
-                    "type": "string"
-                },
-                "timestamp": {
-                    "description": "Unix time of submission",
-                    "type": "integer"
-                },
-                "userId": {
-                    "description": "ID of the user submitting",
-                    "type": "string"
-                }
-            }
-        },
-        "models.Reflection": {
-            "type": "object",
-            "properties": {
                 "id": {
-                    "description": "Composite ID: sessionID-userID",
                     "type": "string"
                 },
                 "sessionId": {
-                    "description": "Which session",
                     "type": "string"
                 },
-                "text": {
-                    "description": "Reflection content",
+                "sharedFeelings": {
+                    "description": "Optional",
                     "type": "string"
                 },
                 "timestamp": {
-                    "description": "Unix time",
                     "type": "integer"
                 },
                 "userId": {
-                    "description": "Who submitted",
                     "type": "string"
                 }
             }

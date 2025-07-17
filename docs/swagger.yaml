@@ -4,23 +4,21 @@ definitions:
     properties:
       clarity:
         type: integer
+      conflictResolution:
+        type: integer
       createdAt:
         type: integer
       empathy:
         type: integer
       listening:
         type: integer
-      openMindedness:
-        type: integer
       partnerId:
-        description: Who submitted this
         type: string
       respect:
         type: integer
-      responsiveness:
-        type: integer
       sessionId:
-        description: Which session this score is for
+        type: string
+      summary:
         type: string
     type: object
   models.Message:
@@ -36,41 +34,22 @@ definitions:
     type: object
   models.PostResolution:
     properties:
-      bondingActivity:
-        description: e.g., "Go for a walk together"
-        type: string
+      attachmentScore:
+        description: Optional 1-5
+        type: integer
       gratitude:
-        description: e.g., "I'm grateful for your honesty"
+        description: Freeform reflection
         type: string
-      reflection:
-        description: e.g., "I felt better after the session"
-        type: string
-      sessionId:
-        description: Associated session ID
-        type: string
-      timestamp:
-        description: Unix time of submission
-        type: integer
-      userId:
-        description: ID of the user submitting
-        type: string
-    type: object
-  models.Reflection:
-    properties:
       id:
-        description: 'Composite ID: sessionID-userID'
         type: string
       sessionId:
-        description: Which session
         type: string
-      text:
-        description: Reflection content
+      sharedFeelings:
+        description: Optional
         type: string
       timestamp:
-        description: Unix time
         type: integer
       userId:
-        description: Who submitted
         type: string
     type: object
   models.Session:
@@ -188,7 +167,8 @@ paths:
       - Users
   /api/insights/{userId}:
     get:
-      description: Returns sessions and reflections submitted by or about the user
+      description: Returns sessions, reflections, scores, and emotional bonding data
+        for a user
       parameters:
       - description: User ID
         in: path
@@ -260,43 +240,6 @@ paths:
       summary: Login a user
       tags:
       - Users
-  /api/moderate:
-    post:
-      consumes:
-      - application/json
-      description: Returns AI feedback + tone warning
-      parameters:
-      - description: Transcript, Context (optional), Speaker
-        in: body
-        name: input
-        required: true
-        schema:
-          additionalProperties:
-            type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Gemini AI moderation of transcript
-      tags:
-      - Chat
   /api/onboarding:
     post:
       consumes:
@@ -344,7 +287,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Stores emotional bonding data after a session
+      description: Stores emotional bonding and gratitude reflection after a session
       parameters:
       - description: Post-resolution data
         in: body
@@ -358,9 +301,7 @@ paths:
         "201":
           description: Created
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/models.PostResolution'
         "400":
           description: Bad Request
           schema:
@@ -376,40 +317,6 @@ paths:
       summary: Save post-resolution reflection
       tags:
       - Reflection
-  /api/reflection:
-    post:
-      consumes:
-      - application/json
-      description: Stores a post-session reflection entry from a user
-      parameters:
-      - description: Reflection Data
-        in: body
-        name: reflection
-        required: true
-        schema:
-          $ref: '#/definitions/models.Reflection'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.Reflection'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Submit a session reflection
-      tags:
-      - Reflections
   /api/register:
     post:
       consumes:
@@ -452,47 +359,12 @@ paths:
       summary: Register a new user
       tags:
       - Users
-  /api/score:
-    post:
-      consumes:
-      - application/json
-      description: Partner submits feedback for a session (used for insights)
-      parameters:
-      - description: Score Data
-        in: body
-        name: score
-        required: true
-        schema:
-          $ref: '#/definitions/models.CommunicationScore'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Submit communication score
-      tags:
-      - Communication
   /api/session:
     post:
       consumes:
       - application/json
-      description: Creates a session document in MongoDB
+      description: Creates a session document in MongoDB and notifies partner via
+        email
       parameters:
       - description: Session Info
         in: body
@@ -552,7 +424,8 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Updates the session's resolved field to true
+      description: Updates the session's resolved field to true, sends partner email,
+        and generates AI scores
       parameters:
       - description: Session ID
         in: path

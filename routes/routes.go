@@ -37,12 +37,17 @@ func SetupRoutes(app *fiber.App) {
 	// ─────────────────────────────────────────────
 	// 🔄 WebSocket Chat Communication
 	// ─────────────────────────────────────────────
-	// For text chat (legacy chat)
+	// Legacy text-based chat WebSocket
 	app.Get("/ws/:userId/:sessionId", websocket.New(controllers.HandleWebSocket))
 
-	// For voice + AI moderation chat
-	app.Use("/ws/:sessionId/:userId", controllers.HandleWebSocket2)
-	app.Get("/ws/:sessionId/:userId", websocket.New(controllers.WebSocketHandler2))
+	// New voice chat + AI moderation WebSocket
+	app.Use("/ws-voice/:sessionId/:userId", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/ws-voice/:sessionId/:userId", websocket.New(controllers.WebSocketHandler2))
 
 	// ─────────────────────────────────────────────
 	// 🧘 Post-Session Reflections & Scores
@@ -55,9 +60,4 @@ func SetupRoutes(app *fiber.App) {
 	// 📊 Communication Insights
 	// ─────────────────────────────────────────────
 	api.Get("/insights/:userId", controllers.GetInsights)
-
-	// Optional: Health Check
-	// api.Get("/health", func(c *fiber.Ctx) error {
-	// 	return c.SendString("Mend API is running")
-	// })
 }
