@@ -17,8 +17,6 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/register", controllers.RegisterUser)
 	api.Post("/login", controllers.LoginUser)
 	api.Get("/user/:id", controllers.GetUser)
-	api.Get("/session/score/:sessionId", controllers.GetSessionScore)
-
 	api.Post("/invite", controllers.InvitePartner)
 	api.Post("/accept-invite", controllers.AcceptInvite)
 
@@ -33,14 +31,18 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/session", controllers.StartSession)
 	api.Get("/session/active/:userId", controllers.GetActiveSession)
 	api.Patch("/session/end/:sessionId", controllers.EndSession)
-
-	// 🧠 AI moderation endpoint (tone, interrupt detection)
+	api.Get("/session/score/:sessionId", controllers.GetSessionScore)
 	api.Post("/moderate", controllers.ModerateChat)
 
 	// ─────────────────────────────────────────────
 	// 🔄 WebSocket Chat Communication
 	// ─────────────────────────────────────────────
-	app.Use("/ws/:userId/:sessionId", websocket.New(controllers.HandleWebSocket))
+	// For text chat (legacy chat)
+	app.Get("/ws/:userId/:sessionId", websocket.New(controllers.HandleWebSocket))
+
+	// For voice + AI moderation chat
+	app.Use("/ws/:sessionId/:userId", controllers.HandleWebSocket2)
+	app.Get("/ws/:sessionId/:userId", websocket.New(controllers.WebSocketHandler2))
 
 	// ─────────────────────────────────────────────
 	// 🧘 Post-Session Reflections & Scores
@@ -54,7 +56,7 @@ func SetupRoutes(app *fiber.App) {
 	// ─────────────────────────────────────────────
 	api.Get("/insights/:userId", controllers.GetInsights)
 
-	// Optional: Health Check or versioning endpoint
+	// Optional: Health Check
 	// api.Get("/health", func(c *fiber.Ctx) error {
 	// 	return c.SendString("Mend API is running")
 	// })
